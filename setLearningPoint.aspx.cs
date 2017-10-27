@@ -1,0 +1,979 @@
+﻿using System;
+using System.Collections;
+using System.Configuration;
+using System.Data;
+using System.Linq;
+using System.Web;
+using System.Web.Security;
+using System.Web.UI;
+using System.Web.UI.HtmlControls;
+using System.Web.UI.WebControls;
+using System.Web.UI.WebControls.WebParts;
+using System.Xml.Linq;
+using Hints.DB;
+using Hints.HintsUtility;
+using Hints.HintsUtility.ScriptUtility;
+
+
+public partial class AuthoringTool_CaseEditor_Paper_setLearningPoint : AuthoringTool_BasicForm_BasicForm
+{
+    protected string strTitle1 = "";
+    protected string strHint1 = "";
+    protected string strHint2 = "";
+    protected string strHint3 = "";
+    protected string strHint4 = "";
+    protected clsHintsDB sqldb = new clsHintsDB();
+    protected string cQuestionID;
+
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+
+        cQuestionID = Session["VMQuestionID"].ToString();
+
+        //提示
+        strTitle1 = this.MultiLanguage("strTitle1");
+        strHint1 = this.MultiLanguage("strHint1");
+        strHint2 = this.MultiLanguage("strHint2");
+        strHint3 = this.MultiLanguage("strHint3");
+        strHint4 = this.MultiLanguage("strHint4");
+        //plAnnotationDetail.Controls.Add(CreateAnnotationDataTable(dtAnnotationData));
+        //panStep.Controls.Clear(); 
+
+        //創建步驟表格
+        panStep.Controls.Add(CreateStepDataTable(getStepData(cQuestionID)));
+
+        ConstructSceneTree();
+        //Response.Write("<script>alert('453')");
+        tvLearningPointTree.SelectedNodeStyle.BackColor = System.Drawing.Color.LightSkyBlue;
+        btDelet.Attributes.Add("onclick", "return confirm( '" + this.MultiLanguage("DeleteNode") + "');");
+        btEdit.Attributes.Add("onclick", "return confirm('" + this.MultiLanguage("EditLearningPoint") + "')");
+        btCancelEdit.Attributes.Add("onclick", "return confirm('" + this.MultiLanguage("CanceltheEdit") + "')");
+        ChangeLanguage();
+
+    }
+    #region //建樹
+    //創造LearningPointTree的ROOT
+    protected void ConstructSceneTree()
+    {
+        //先清空原有的題庫樹
+        tvLearningPointTree.Nodes.Clear();
+
+        TreeNode root = new TreeNode();
+        root.Value = "RootNode";
+        root.Text = "Learning Point ";
+        tvLearningPointTree.Nodes.Add(constructLearningPointTree(root));
+        tvLearningPointTree.CollapseAll();
+
+        TreeNode tnRoot = new TreeNode();
+        TreeNode tnNode = new TreeNode();
+
+        tnRoot = tvLearningPointTree.Nodes[0];
+        tnRoot.Expanded = true;
+
+        for (int nIdx = 0; nIdx < tnRoot.ChildNodes.Count; nIdx++)
+        {
+            tnNode = tvLearningPointTree.Nodes[0].ChildNodes[nIdx];
+            tnNode.Expand();
+        }
+        //將屬性樹展開
+        tvLearningPointTree.ExpandAll();
+    }
+
+    //用遞迴創樹
+    protected TreeNode constructLearningPointTree(TreeNode root)
+    {
+        DataTable dtTree = new DataTable();
+        String SQL = "SELECT * FROM SituationQuestionLearningPointTree WHERE cParentID = '" + root.Value.ToString() + "'";
+        dtTree = sqldb.getDataSet(SQL).Tables[0];
+        SQL = "SELECT * FROM SituationQuestionLearningPointTree";
+        DataTable dt = sqldb.getDataSet(SQL).Tables[0];
+
+        if (dtTree.Rows.Count > 0)
+        {
+
+            for (int i = 0; i < dtTree.Rows.Count; i++)
+            {
+                int a = 0;
+                TreeNode node = new TreeNode();
+                node.Value = dtTree.Rows[i]["cNodeID"].ToString();
+                node.Text = dtTree.Rows[i]["content"].ToString();
+                if (tbcKeyWord.Text == "")
+                {
+                    root.ChildNodes.Add(constructLearningPointTree(node));
+                }
+                else if (tbcKeyWord.Text != "")
+                {
+                    a = search(dt, node);
+                    if (a == 1)
+                    {
+                        root.ChildNodes.Add(constructLearningPointTree(node));
+                    }
+                }
+
+
+            }
+        }
+
+        return root;
+
+    }
+
+    #endregion
+
+    #region//建立表格
+    //創建這個問題的各步驟在表格中
+    protected Table CreateStepDataTable(DataTable dtStep)
+    {
+        Table tbStep = new Table();
+        tbStep.ID = "tdStep";
+        //tbStep.CssClass = "header1_table";
+        //tbStep.Width = 100%;
+        tbStep.CssClass = "table";
+        tbStep.Attributes["style"] = "border:solid 1px black;border-co;;aspse:collapse; width:100%;";
+        //tbStep.Attributes["style"] = " width:100%;";
+
+
+        TableRow trTittle = new TableRow();
+        trTittle.ID = "trTittle";
+        trTittle.CssClass = "header1_table_first_row";
+        //trTittle.CssClass = "success";
+        trTittle.Height = 30;
+
+        TableCell tcTittle = new TableCell();
+        tcTittle.ID = "tcTittle";
+
+        tcTittle.Attributes["Width"] = "100%";
+
+        //tcTittle.HorizontalAlign = HorizontalAlign.Right;
+        tcTittle.ColumnSpan = 5;
+        tcTittle.Font.Bold = true;
+
+        //題目標題
+        Label lbQuestionTitle = new Label();
+        //-----------------------
+        lbQuestionTitle.Text = this.MultiLanguage("lbQuestionTitle"); //目前是寫死的
+        //-----------------------
+
+        //Edit按鈕
+        Button btChangeToAddLearningPoint = new Button();
+        btChangeToAddLearningPoint.ID = "btChangeToAddLearningPoint";
+        if (HiddenSituation.Value.ToString() == this.MultiLanguage("Edit")) //現在按鈕要顯示Edit
+            btChangeToAddLearningPoint.Text = this.MultiLanguage("Edit");
+        else
+            btChangeToAddLearningPoint.Text = this.MultiLanguage("Submit");//現在按鈕要顯示Submit
+        btChangeToAddLearningPoint.CssClass = "button_continue";
+        btChangeToAddLearningPoint.Click += new EventHandler(btChangeToAddLearningPoint_Click);
+
+        Table tb = new Table();//為了排版好看，表標題包起來
+        tb.HorizontalAlign = HorizontalAlign.Center;
+        tb.Attributes["Width"] = "100%";
+        TableRow tr = new TableRow();
+        TableCell tcText = new TableCell();
+        tcText.Attributes["style"] = "font-size: x-large; font-weight: bold";
+        tcText.Attributes["Width"] = "100%";
+        tcText.HorizontalAlign = HorizontalAlign.Center;
+        TableCell tcButton = new TableCell();
+        tcButton.HorizontalAlign = HorizontalAlign.Right;
+
+        tcText.Controls.Add(lbQuestionTitle);
+        tcButton.Controls.Add(btChangeToAddLearningPoint);
+        tr.Controls.Add(tcText);
+        tr.Controls.Add(tcButton);
+        tb.Controls.Add(tr);
+
+        tcTittle.Controls.Add(tb);
+
+        //標題
+        TableRow trItem = new TableRow();
+        trItem.ID = "trItem";
+        // trItem.CssClass = "header1_tr_even_row";
+        trItem.CssClass = "info";
+
+
+        TableCell tcTitleWeight = new TableCell();
+        tcTitleWeight.ID = "tcTitleWeight";
+        tcTitleWeight.Text = this.MultiLanguage("Weight");
+        tcTitleWeight.Attributes["Width"] = "5%";
+        tcTitleWeight.Attributes["horizontalalign"] = "right";
+        tcTitleWeight.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+        tcTitleWeight.Font.Bold = true;
+
+        TableCell tcTitleStep = new TableCell();
+        tcTitleStep.ID = "tcStep";
+        tcTitleStep.Text = this.MultiLanguage("Order");
+        tcTitleStep.Attributes["Width"] = "5%";
+        tcTitleStep.Attributes["horizontalalign"] = "right";
+        tcTitleStep.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+        tcTitleStep.Font.Bold = true;
+
+        TableCell tcTitleName = new TableCell();
+        tcTitleName.ID = "tcName";
+        tcTitleName.Text = this.MultiLanguage("Name");
+        tcTitleName.Attributes["Width"] = "20%";
+        tcTitleName.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+        tcTitleName.Font.Bold = true;
+
+        TableCell tcTitleLearningPoint = new TableCell();
+        tcTitleLearningPoint.ID = "tcLearningPoint";
+        tcTitleLearningPoint.Text = this.MultiLanguage("LearningPoints");
+        tcTitleLearningPoint.Attributes["Width"] = "70%";
+        tcTitleLearningPoint.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+        tcTitleLearningPoint.Font.Bold = true;
+
+        trTittle.Controls.Add(tcTittle);
+        tbStep.Controls.Add(trTittle);
+
+
+        trItem.Controls.Add(tcTitleStep);
+        trItem.Controls.Add(tcTitleWeight);
+        trItem.Controls.Add(tcTitleName);
+        trItem.Controls.Add(tcTitleLearningPoint);
+
+        tbStep.Controls.Add(trItem);
+
+
+        int tableRowClassPoint = 0;
+        int orderPoint = 0;//記錄現在到order幾
+        //資料列
+        for (int i = 0; i < dtStep.Rows.Count; i++)
+        {
+            TableRow trData = new TableRow();
+            trData.ID = "trStep_" + i;
+            //if ((i + 1) % 2 == 0)
+            // trData.CssClass = "header1_tr_even_row";
+            // else
+            //  trData.CssClass = "header1_tr_odd_row";
+
+
+            //步驟順序
+            TableCell tcStep = new TableCell();
+            tcStep.ID = "tcStep_" + i;
+            if (i == 0)
+            {
+                tcStep.Text = (orderPoint + 1).ToString();
+                orderPoint++;
+            }
+            else if (dtStep.Rows[i]["OrderNum"].ToString() == dtStep.Rows[i - 1]["OrderNum"].ToString())
+            {
+            }
+            else
+            {
+                if (dtStep.Rows[i]["strUniteMode"].ToString() == "Or" || dtStep.Rows[i]["strUniteMode"].ToString() == "And" || dtStep.Rows[i]["strUniteMode"].ToString() == "OR" || dtStep.Rows[i]["strUniteMode"].ToString() == "AND" || dtStep.Rows[i]["strUniteMode"].ToString().Contains("SOME") || dtStep.Rows[i]["strUniteMode"].ToString().Contains("Some"))
+                {
+                    tcStep.Text = dtStep.Rows[i]["strUniteMode"].ToString();
+                }
+                else
+                {
+                    tcStep.Text = (orderPoint + 1).ToString();
+                    orderPoint++;
+                }
+            }
+            //tcStep.Text = dtStep.Rows[i]["OrderNum"].ToString();
+            tcStep.Attributes["Width"] = "10%";
+            tcStep.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+            tcStep.HorizontalAlign = HorizontalAlign.Center;
+
+            //要得到這個步驟應該完成哪些事情，所以須改變他的rowspan
+            int rowspanNum = 0;
+            for (int j = 0; j < dtStep.Rows.Count; j++)
+            {
+                if (dtStep.Rows[i]["OrderNum"].ToString() == dtStep.Rows[j]["OrderNum"].ToString())
+                    rowspanNum = rowspanNum + 1;
+            }
+            tcStep.RowSpan = rowspanNum;
+
+            //權重
+            TableCell tcWeight = new TableCell();
+            tcWeight.ID = "tcWeight_" + i;
+            tcWeight.Attributes["Width"] = "10%";
+            tcWeight.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+            tcWeight.RowSpan = rowspanNum;
+            tcWeight.HorizontalAlign = HorizontalAlign.Center;
+
+            DropDownList ddlWeight = new DropDownList();
+            ddlWeight.ID = "ddlWeight_" + dtStep.Rows[i]["strStepID"].ToString();
+            ddlWeight.Width = 50;
+            for (int j = 1; j <= 5; j++)
+            {
+                ddlWeight.Items.Add(new ListItem(j.ToString(), "ddlWeight_" + dtStep.Rows[i]["strStepID"].ToString() + j.ToString()));
+            }
+            for (int j = 0; j < 5; j++)
+            {
+                if (dtStep.Rows[i]["weight"].ToString() == ddlWeight.Items[j].Text.ToString())
+                    ddlWeight.SelectedIndex = j;
+            }
+
+            if (HiddenSituation.Value.ToString() == this.MultiLanguage("Edit")) //現在按鈕顯示Edit,ddlWeight不可以選
+                ddlWeight.Enabled = false;
+            else
+                ddlWeight.Enabled = true;//現在按鈕顯示Submit , ddlWeight可以選
+            ddlWeight.AutoPostBack = true;
+            ddlWeight.SelectedIndexChanged += new EventHandler(ddlWeight_Change);
+            tcWeight.Controls.Add(ddlWeight);
+
+
+
+            //步驟名稱
+            TableCell tcName = new TableCell();
+            tcName.ID = "tcName_" + i;
+            tcName.Attributes["Width"] = "20%";
+            tcName.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+            tcName.HorizontalAlign = HorizontalAlign.Left;
+            //tcName.Font.Bold = true;
+
+            Label lbName = new Label();
+            lbName.ID = "lbName_" + i;
+            lbName.Text = dtStep.Rows[i]["strAnnotationName"].ToString();
+
+            //供選擇要將learningPoint 加到哪個事情的radioButton
+            RadioButton rbPoint = new RadioButton();
+            rbPoint.GroupName = "point";
+            rbPoint.ID = "rbPoint_" + dtStep.Rows[i]["strRecordID"].ToString();
+            if (HiddenSelectRtb.Value == dtStep.Rows[i]["strRecordID"].ToString())
+            {
+                rbPoint.Checked = true;
+
+            }
+            else if (HiddenSelectRtb.Value == "")
+                HiddenSelectRtb.Value = dtStep.Rows[0]["strRecordID"].ToString();
+
+            if (HiddenSituation.Value.ToString() == this.MultiLanguage("Edit")) //現在按鈕顯示Edit,rbPoint不可以選
+                rbPoint.Enabled = false;
+            else
+                rbPoint.Enabled = true;//現在按鈕顯示Submit , rbPoint可以選
+
+
+            rbPoint.AutoPostBack = true;
+            rbPoint.CheckedChanged += new EventHandler(rbPoint_CheckedChanged);
+
+
+            tcName.Controls.Add(rbPoint);
+            tcName.Controls.Add(lbName);
+
+
+
+            //Learning Point
+            TableCell tcLearningPoint = new TableCell();
+            tcLearningPoint.Attributes["style"] = "border:solid 1px black;border-collaspse:collapse;";
+            tcLearningPoint.HorizontalAlign = HorizontalAlign.Left;
+            tcLearningPoint.Controls.Add(setLearningPointTableForTcLearningPoint(dtStep.Rows[i]["strRecordID"].ToString()));
+
+
+
+            //和前一個orderNum一樣的話代表他們同屬於同一個大步驟，所以其大步驟就不顯示
+            if (i == 0 || dtStep.Rows[i]["OrderNum"].ToString() != dtStep.Rows[i - 1]["OrderNum"].ToString())
+            {
+                trData.Controls.Add(tcStep);
+                trData.Controls.Add(tcWeight);
+
+                if (tableRowClassPoint == 1)
+                {
+                    tableRowClassPoint = 0;
+                }
+                else if (tableRowClassPoint == 0)
+                {
+                    tableRowClassPoint = 1;
+                }
+            }
+
+            //設定tableRow的class
+            if (tableRowClassPoint == 1)
+            {
+                trData.CssClass = "warning";
+            }
+            else if (tableRowClassPoint == 0)
+            {
+                trData.CssClass = "success";
+            }
+
+
+
+            trData.Controls.Add(tcName);
+            trData.Controls.Add(tcLearningPoint);
+            tbStep.Controls.Add(trData);
+            ViewState["ddlWeight"] = ddlWeight.SelectedIndex;
+
+
+        }
+
+        return tbStep;
+    }
+
+
+
+    //設定LearningPoint欄位中的資料，以TABLE表示
+    public Table setLearningPointTableForTcLearningPoint(string strRecordID)
+    {
+        DataTable dtLearningPoint = new DataTable();
+        dtLearningPoint = getLearningPointData(strRecordID);
+
+        Table tbLearningPoint = new Table();
+        tbLearningPoint.ID = "tbLearningPoint_" + strRecordID;
+        tbLearningPoint.Attributes["Width"] = "99%";
+
+        for (int i = 0; i < dtLearningPoint.Rows.Count; i++)
+        {
+            TableRow trLearningPoint = new TableRow();
+            trLearningPoint.ID = "trLerningPoint_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+
+            TableCell tcLearningPoint = new TableCell();
+            tcLearningPoint.ID = "tcLerningPoint_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+            Label lbLearningPointContent = new Label();
+            lbLearningPointContent.ID = "lbLearningPoint_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+            lbLearningPointContent.Text = dtLearningPoint.Rows[i]["content"].ToString();
+            tcLearningPoint.Attributes["Width"] = "90%";
+            tcLearningPoint.Controls.Add(lbLearningPointContent);
+
+            TableCell tcDelButton = new TableCell();
+            tcDelButton.ID = "tcDelButton_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+            ImageButton imbtDel = new ImageButton();
+            imbtDel.ID = "imbtDel_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+            imbtDel.ImageUrl = "~/AuthoringTool/CaseEditor/Paper/images/led-icons/cancel.png";
+            if (HiddenSituation.Value.ToString() == "Edit")
+                imbtDel.Visible = false;
+            else
+                imbtDel.Visible = true;//現在按鈕顯示Submit , imbtDel可以選
+
+            imbtDel.Click += new ImageClickEventHandler(imbtDel_Click);
+            tcDelButton.Attributes["Width"] = "5%";
+            tcDelButton.HorizontalAlign = HorizontalAlign.Right;
+            tcDelButton.Controls.Add(imbtDel);
+
+            TableCell tcModifyButton = new TableCell();
+            tcModifyButton.ID = "tcModifyButton_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+            ImageButton imbtModify = new ImageButton();
+            imbtModify.ID = "imbtModify_" + dtLearningPoint.Rows[i]["cLearningPointID"].ToString();
+            imbtModify.ImageUrl = "~/AuthoringTool/CaseEditor/Paper/images/led-icons/pencil.png";
+            if (HiddenSituation.Value.ToString() == this.MultiLanguage("Edit")) //現在按鈕顯示Edit,imbtModify不可以選
+                imbtModify.Visible = false;
+            else
+                imbtModify.Visible = true;//現在按鈕顯示Submit , imbtModify可以選
+            imbtModify.Click += new ImageClickEventHandler(imbtModify_Click);
+            tcModifyButton.Attributes["Width"] = "5%";
+            tcModifyButton.HorizontalAlign = HorizontalAlign.Right;
+            tcModifyButton.Controls.Add(imbtModify);
+
+            trLearningPoint.Controls.Add(tcLearningPoint);
+            trLearningPoint.Controls.Add(tcDelButton);
+            trLearningPoint.Controls.Add(tcModifyButton);
+            tbLearningPoint.Controls.Add(trLearningPoint);
+
+        }
+
+        return tbLearningPoint;
+    }
+
+    #endregion
+
+    //得到各步驟的資訊
+    protected DataTable getStepData(string cQuestionID)
+    {
+        DataTable dtStepData = new DataTable();
+        string strSQL = "SELECT * FROM ItemForVRAuthoringStepsList A , ItemForVRStepRecords S WHERE A.cQuestionID = '" + cQuestionID.ToString() + "' AND A.strStepID = S.strStepID ORDER BY A.OrderNum";
+        dtStepData = sqldb.getDataSet(strSQL).Tables[0];
+
+        return dtStepData;
+    }
+
+    //得到該步驟的LearningPoint
+    protected DataTable getLearningPointData(string strRecordID)
+    {
+        DataTable dtLearningPoint = new DataTable();
+        String strSQL = "SELECT * FROM SituationQuestionStepLearningPoint S , SituationQuestionLearningPointTree T WHERE S.strRecordID = '" + strRecordID +
+                        "' AND S.cNodeID = T.cNodeID";
+        dtLearningPoint = sqldb.getDataSet(strSQL).Tables[0];
+
+        return dtLearningPoint;
+    }
+
+
+    #region//動態產生的按鈕觸發區
+    //動態產生的Edit按鈕觸發
+    protected void btChangeToAddLearningPoint_Click(object sender, EventArgs e)
+    {
+        Button temp = (Button)FindControl("btChangeToAddLearningPoint");
+
+        DataTable dtStep = new DataTable();
+        dtStep = getStepData(cQuestionID);//目前為寫死
+
+        //判斷目前狀態是否為編輯步驟中的LearningPoint，是則顯示各個操作按鈕
+        if (temp.Text.ToString() == this.MultiLanguage("Edit"))
+        {
+            for (int i = 0; i < dtStep.Rows.Count; i++)
+            {
+                DataTable dtLearningPoint = new DataTable();
+                dtLearningPoint = getLearningPointData(dtStep.Rows[i]["strRecordID"].ToString());
+                for (int j = 0; j < dtLearningPoint.Rows.Count; j++)
+                {
+                    ImageButton imbtDel = (ImageButton)FindControl("imbtDel_" + dtLearningPoint.Rows[j]["cLearningPointID"].ToString());
+                    imbtDel.Visible = true;
+                    ImageButton imbtModify = (ImageButton)FindControl("imbtModify_" + dtLearningPoint.Rows[j]["cLearningPointID"].ToString());
+                    imbtModify.Visible = true;
+
+                }
+                RadioButton myControl = (RadioButton)FindControl("rbPoint_" + dtStep.Rows[i]["strRecordID"].ToString());
+                myControl.Enabled = true;
+
+                DropDownList ddlWeight = (DropDownList)FindControl("ddlWeight_" + dtStep.Rows[i]["strStepID"].ToString());
+                ddlWeight.Enabled = true;
+            }
+
+            temp.Text = this.MultiLanguage("Submit");
+            btAdd.CssClass = "button_gray";
+            btAdd.Enabled = false;
+            btDelet.CssClass = "button_gray";
+            btDelet.Enabled = false;
+            btModify.CssClass = "button_gray";
+            btModify.Enabled = false;
+            HiddenSituation.Value = this.MultiLanguage("Submit");
+            divAdd.Style["Display"] = "none";
+            divModify.Style["Display"] = "none";
+        }
+
+
+        //目前按鈕顯示為submit，即已經為可以編輯的狀態，此時再按下按鈕則完成編輯
+        else
+        {
+
+            for (int i = 0; i < dtStep.Rows.Count; i++)
+            {
+                DataTable dtLearningPoint = new DataTable();
+                dtLearningPoint = getLearningPointData(dtStep.Rows[i]["strRecordID"].ToString());
+                for (int j = 0; j < dtLearningPoint.Rows.Count; j++)
+                {
+                    ImageButton imbtDel = (ImageButton)FindControl("imbtDel_" + dtLearningPoint.Rows[j]["cLearningPointID"].ToString());
+                    imbtDel.Visible = false;
+                    ImageButton imbtModify = (ImageButton)FindControl("imbtModify_" + dtLearningPoint.Rows[j]["cLearningPointID"].ToString());
+                    imbtModify.Visible = false;
+
+                }
+                RadioButton myControl = (RadioButton)FindControl("rbPoint_" + dtStep.Rows[i]["strRecordID"].ToString());
+                myControl.Enabled = false;
+
+                DropDownList ddlWeight = (DropDownList)FindControl("ddlWeight_" + dtStep.Rows[i]["strStepID"].ToString());
+                ViewState["a"] = ddlWeight.SelectedItem.ToString();
+                ddlWeight.Enabled = false;
+
+
+            }
+            temp.Text = this.MultiLanguage("Edit");
+            btAdd.CssClass = "button_continue";
+            btAdd.Enabled = true;
+            btDelet.CssClass = "button_continue";
+            btDelet.Enabled = true;
+            btModify.CssClass = "button_continue";
+            btModify.Enabled = true;
+            HiddenSelectNodeText.Value = "";
+            HiddenSelectNodeValue.Value = "";
+            HiddenSituation.Value = this.MultiLanguage("Edit");
+            divEditLearningPoint.Style["Display"] = "none";
+        }
+
+    }
+
+    //得到目前所點選的步驟
+    protected void rbPoint_CheckedChanged(object sender, EventArgs e)
+    {
+        RadioButton temp = (RadioButton)sender;
+
+        HiddenSelectRtb.Value = temp.ID.ToString().Replace("rbPoint_", "");
+        //Response.Write(HiddenSelectRtb.Value);
+    }
+
+    //更改weight
+    protected void ddlWeight_Change(object sender, EventArgs e)
+    {
+        DropDownList weight = (DropDownList)sender;
+        string strSQL = "UPDATE ItemForVRAuthoringStepsList SET weight='" + weight.SelectedItem.ToString() + "' WHERE strStepID ='" + weight.ID.ToString().Replace("ddlWeight_", "") + "'";
+        sqldb.ExecuteNonQuery(strSQL);
+    }
+
+    //刪除learningPoint的刪除圖示觸發
+    protected void imbtDel_Click(object sender, EventArgs e)
+    {
+        ImageButton del = (ImageButton)sender;
+
+        string strSQL = "DELETE situationQuestionStepLearningPoint WHERE cLearningPointID = '" + del.ID.ToString().Replace("imbtDel_", "") + "'";
+
+        sqldb.ExecuteNonQuery(strSQL);
+
+        //重新創表格
+        panStep.Controls.Clear();
+        panStep.Controls.Add(CreateStepDataTable(getStepData(cQuestionID)));
+
+
+
+    }
+
+    //編輯learningPoint的圖示按鈕觸發
+    protected void imbtModify_Click(object sender, EventArgs e)
+    {
+        ImageButton modify = (ImageButton)sender;
+        Label myControl = (Label)FindControl(modify.ID.ToString().Replace("imbtModify_", "lbLearningPoint_"));
+        //得到這個Node的ParentNode的內容(名稱)
+        string strSQL = "SELECT * FROM (SELECT cParentID FROM SituationQuestionLearningPointTree ST , SituationQuestionStepLearningPoint S " +
+                        "WHERE ST.cNodeID = S.cNodeID AND S.cLearningPointID = '" + modify.ID.ToString().Replace("imbtModify_", "") + "') A ," +
+                        "SituationQuestionLearningPointTree B WHERE A.cParentID = B.cNodeID";
+        DataTable dtEdit = sqldb.getDataSet(strSQL).Tables[0];
+        HiddenSelectLearningPointValue.Value = modify.ID.ToString().Replace("imbtModify_", "");
+        lbCategory.Text = dtEdit.Rows[0]["content"].ToString();
+        tbxEditLearningPoint.Text = myControl.Text.ToString();
+        divEditLearningPoint.Style["Display"] = "";
+        divAdd.Style["Display"] = "none";
+        divModify.Style["Display"] = "none";
+    }
+    #endregion
+
+    //點了TreeNode後將TreeNode內容加入資料表
+    public void addLearningPointToDB()
+    {
+        string strSQL = "SELECT * FROM SituationQuestionLearningPointTree WHERE cParentID = '" + HiddenSelectNodeValue.Value.ToString() + "'";
+        DataTable dtNode = sqldb.getDataSet(strSQL).Tables[0];
+        //選取的節點還有子節點，所以不可以加入learningPoint
+        if (dtNode.Rows.Count > 0)
+        {
+            Page.ClientScript.RegisterStartupScript(this.GetType(), "", "<script>alert('You Have To Choise a Node doesnot have Child !');</script>");
+        }
+        else
+        {
+            strSQL = "SELECT * FROM SituationQuestionStepLearningPoint WHERE strRecordID ='" + HiddenSelectRtb.Value.ToString() + "' AND cNodeID = '" + HiddenSelectNodeValue.Value.ToString() + "'";
+
+            dtNode = sqldb.getDataSet(strSQL).Tables[0];
+            //在這個step中已經有這個learningPoint
+            if (dtNode.Rows.Count > 0)
+            {
+                Page.ClientScript.RegisterStartupScript(this.GetType(), "", "<script>alert('There has been the same Learning Point in the step !');</script>");
+            }
+            else
+            {
+                //新增learningPoint到所選取的step中
+                strSQL = "INSERT INTO SituationQuestionStepLearningPoint VALUES('LearningPoint_" + DateTime.Now.ToString("yyyyMMddHHmmssfffffff").ToString() + "','" + HiddenSelectRtb.Value.ToString() + "','" + HiddenSelectNodeValue.Value.ToString() + "')";
+                try
+                {
+                    sqldb.ExecuteNonQuery(strSQL);
+                }
+                catch
+                {
+                    //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+                }
+            }
+
+        }
+
+
+    }
+
+
+    #region //彈出的div按鈕觸發
+    //在新增節點的div按下ADD後的動作
+    protected void btAddSubmit_Click(object sender, EventArgs e)
+    {
+
+        //新增節點至資料表中      
+        string strSQL = "INSERT INTO SituationQuestionLearningPointTree VALUES('pointNode_" + DateTime.Now.ToString("yyyyMMddHHmmssfffffff").ToString() + "','" + HiddenSelectNodeValue.Value.ToString() + "','" + tbxNewPoint.Text.ToString() + "')";
+        try
+        {
+            sqldb.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+
+        divAdd.Style["Display"] = "none";
+        //重新再創樹       
+        ConstructSceneTree();
+        //將選到的點清空
+        HiddenSelectNodeText.Value = "";
+        HiddenSelectNodeValue.Value = "";
+    }
+
+
+    //按了在divEditLearningPoint的submit
+    protected void btEditLearningPointSubmit_Click(object sender, EventArgs e)
+    {
+        string strSQL = "SELECT B.cNodeID,B.cParentID,B.content FROM (SELECT cParentID FROM SituationQuestionLearningPointTree ST , SituationQuestionStepLearningPoint S " +
+                        "WHERE ST.cNodeID = S.cNodeID AND S.cLearningPointID = '" + HiddenSelectLearningPointValue.Value.ToString() + "') A ," +
+                        "SituationQuestionLearningPointTree B WHERE A.cParentID = B.cParentID AND convert(nvarchar(255),B.content) ='" + tbxEditLearningPoint.Text.ToString() + "'";
+
+        DataTable dtChildNode = sqldb.getDataSet(strSQL).Tables[0];
+
+        //在這個類別(父節點)中已經有使用者要編輯的內容，將原本的內容設成learningPoint
+        if (dtChildNode.Rows.Count > 0)
+        {
+            strSQL = "UPDATE SituationQuestionStepLearningPoint SET cNodeID = '" + dtChildNode.Rows[0]["cNodeID"] + "' WHERE cLearningPointID = '" + HiddenSelectLearningPointValue.Value.ToString() + "'";
+            sqldb.ExecuteNonQuery(strSQL);
+        }
+        else//這個類別(父節點)中，沒有使用者要編輯的內容，將新的內容加入TREE中，並將新的node設成learningPoint
+        {
+            strSQL = "SELECT cParentID FROM SituationQuestionLearningPointTree ST , SituationQuestionStepLearningPoint S " +
+                      "WHERE ST.cNodeID = S.cNodeID AND S.cLearningPointID = '" + HiddenSelectLearningPointValue.Value.ToString() + "'";
+            DataTable dtParentID = sqldb.getDataSet(strSQL).Tables[0];
+
+            string temp = DateTime.Now.ToString("yyyyMMddHHmmssfffffff").ToString();
+            //新增節點至資料表中      
+            strSQL = "INSERT INTO SituationQuestionLearningPointTree VALUES('pointNode_" + temp + "','" + dtParentID.Rows[0]["cParentID"].ToString() + "','" + tbxEditLearningPoint.Text.ToString() + "')";
+            sqldb.ExecuteNonQuery(strSQL);
+
+            //將新創的節點設到step的learningPoint中
+            strSQL = "UPDATE SituationQuestionStepLearningPoint SET cNodeID = 'pointNode_" + temp + "' WHERE cLearningPointID = '" + HiddenSelectLearningPointValue.Value.ToString() + "'";
+            sqldb.ExecuteNonQuery(strSQL);
+
+
+            //重新再創樹       
+            ConstructSceneTree();
+
+            //將選到的點清空
+            HiddenSelectNodeText.Value = "";
+            HiddenSelectNodeValue.Value = "";
+        }
+
+        //重新創表格
+        panStep.Controls.Clear();
+        panStep.Controls.Add(CreateStepDataTable(getStepData(cQuestionID)));
+        divEditLearningPoint.Style["Display"] = "none";
+    }
+
+    //按了在divModify中的submit
+    protected void btModifySubmit_Click(object sender, EventArgs e)
+    {
+        //更改表中的節點      
+        string strSQL = "UPDATE SituationQuestionLearningPointTree SET content ='" + tbxModifyNode.Text.ToString() + "' WHERE cNodeID = '" + HiddenSelectNodeValue.Value.ToString() + "'";
+        try
+        {
+            sqldb.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+
+        divModify.Style["Display"] = "none";
+        //重新再創樹       
+        ConstructSceneTree();
+        //重新創表格
+        panStep.Controls.Clear();
+        panStep.Controls.Add(CreateStepDataTable(getStepData(cQuestionID)));
+        //將選到的點清空
+        HiddenSelectNodeText.Value = "";
+        HiddenSelectNodeValue.Value = "";
+    }
+
+    //在div按下Cancel後的動作
+    protected void btCancel_Click(object sender, EventArgs e)
+    {
+        divAdd.Style["Display"] = "none";
+        divModify.Style["Display"] = "none";
+        divEditLearningPoint.Style["Display"] = "none";
+        HiddenSelectNodeText.Value = "";
+        HiddenSelectNodeValue.Value = "";
+    }
+    #endregion
+
+    //按了Delete鍵後
+    protected void btDelet_Click(object sender, EventArgs e)
+    {
+        divModify.Style["Display"] = "none";
+        divAdd.Style["Display"] = "none";
+        //如果有選到點則清除
+        if (HiddenSelectNodeText.Value.ToString() != "")
+        {
+            Delete_Node(HiddenSelectNodeValue.Value.ToString());
+            ConstructSceneTree();
+            //重新創表格
+            panStep.Controls.Clear();
+            panStep.Controls.Add(CreateStepDataTable(getStepData(cQuestionID)));
+            //將選到的點清空
+            HiddenSelectNodeText.Value = "";
+            HiddenSelectNodeValue.Value = "";
+
+        }
+
+        else
+        {
+            Page.ClientScript.RegisterStartupScript(this.GetType(), "", "<script>alert('Please Select a Node ! ');</script>");
+        }
+
+
+    }
+
+    //刪除節點
+    public void Delete_Node(string nodeID_to_delete)
+    {
+        string tempForDelNode = nodeID_to_delete;
+        string strSQL = "DELETE situationQuestionLearningPointTree WHERE cNodeID = '" + tempForDelNode + "'";
+
+        sqldb.ExecuteNonQuery(strSQL);
+        //刪除子節點
+        strSQL = "SELECT cNodeID FROM situationQuestionLearningPointTree WHERE cParentID = '" + tempForDelNode + "' ";
+        DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+        if (dt.Rows.Count > 0)
+        {
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                Delete_Node(dt.Rows[i]["cNodeID"].ToString());
+            }
+        }
+
+        strSQL = "DELETE situationQuestionStepLearningPoint WHERE cNodeID = '" + tempForDelNode + "'";
+        sqldb.ExecuteNonQuery(strSQL);
+        //hintsDB.ExecuteNonQuery(strSQL);
+    }
+
+    //點了節點後的動作
+    protected void tvLearningPointTree_SelectedNodeChanged(object sender, EventArgs e)
+    {
+        HiddenSelectNodeText.Value = tvLearningPointTree.SelectedNode.Text.ToString();
+        HiddenSelectNodeValue.Value = tvLearningPointTree.SelectedNode.Value.ToString();
+        lbSelectNode.Text = HiddenSelectNodeText.Value.ToString();
+        //lbNodeID.Text = HiddenSelectNodeValue.Value.ToString();
+        tbxModifyNode.Text = HiddenSelectNodeText.Value.ToString();
+
+        //若Add Button為可以按，則表示點了節點不會將LearningPoint加入table中，所以不動作
+        if (btAdd.Enabled == true)
+        {
+            //doNoting
+        }
+        //編輯步驟中的LearningPoint ，點了Node會將Node加到table
+        else
+        {
+            addLearningPointToDB();
+            //重新創表格
+            panStep.Controls.Clear();
+            panStep.Controls.Add(CreateStepDataTable(getStepData(cQuestionID)));
+        }
+
+    }
+    //按下ADD鍵後
+    protected void btAdd_Click(object sender, EventArgs e)
+    {
+        if (HiddenSelectNodeText.Value.ToString() != "")
+        {
+
+            divAdd.Style["Display"] = "";
+            divModify.Style["Display"] = "none";
+            divEditLearningPoint.Style["Display"] = "none";
+        }
+
+        else
+        {
+            Page.ClientScript.RegisterStartupScript(this.GetType(), "", "<script>alert('" + this.MultiLanguage("PleaseSelectaGroup") + "');</script>");
+        }
+
+        //div1.Style["Display"] = "Block";
+    }
+    //按下Modify後
+    protected void btModify_Click(object sender, EventArgs e)
+    {
+        if (HiddenSelectNodeText.Value.ToString() != "")
+        {
+
+            divModify.Style["Display"] = "";
+            divAdd.Style["Display"] = "none";
+            divEditLearningPoint.Style["Display"] = "none";
+        }
+
+        else
+        {
+            Page.ClientScript.RegisterStartupScript(this.GetType(), "", "<script>alert('" + this.MultiLanguage("PleaseSelectaGroup") + "');</script>");
+        }
+    }
+
+    public int search(DataTable dt, TreeNode node)
+    {
+        int count = 0;
+        int child = 0;
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+            //有子節點且子節點含關鍵字
+            if (dt.Rows[i]["cParentID"].ToString() == node.Value.ToString() && dt.Rows[i]["content"].ToString().Contains(tbcKeyWord.Text.ToString()))
+                count = 1;
+
+        }
+        //判斷是否有子節點
+        for (int i = 0; i < dt.Rows.Count; i++)
+        {
+
+            if (dt.Rows[i]["cParentID"].ToString() == node.Value.ToString())
+                child++;
+
+        }
+
+        if (child == 0 && node.Text.ToString().Contains(tbcKeyWord.Text.ToString()))
+            count = 1;
+        return count;
+
+    }
+
+    protected void imbtSearch_Click(object sender, EventArgs e)
+    {
+        ConstructSceneTree();
+    }
+
+    protected void tbcKeyWord_TextChanged(object sender, EventArgs e)
+    {
+        ConstructSceneTree();
+
+    }
+
+    protected void btCancelEdit_Click(object sender, EventArgs e)
+    {
+        Page.RegisterStartupScript("js", "<script language=\"javascript\">showVMWindow()</script>");
+    }
+
+    protected void btFinishEdit_Click(object sender, EventArgs e)
+    {
+        Page.RegisterStartupScript("js", "<script language=\"javascript\">showVMWindow()</script>");
+    }
+
+    protected string MultiLanguage(string text)
+    {
+        string ret_text = MultiLanguage(text, ddl_MutiLanguage.SelectedItem.Text.ToString());
+        ret_text = (ret_text == "" || ret_text == null) ? text : ret_text;
+        return ret_text;
+    }
+
+    public static string MultiLanguage(string text, string culture)
+    {
+        string ret = "";
+
+        System.Resources.ResourceManager res = Resources.setLearningPoint.resource.ResourceManager;
+        //setLocalName(language);
+        System.Globalization.CultureInfo ci = new System.Globalization.CultureInfo(culture);//zh-TW
+
+        try
+        {
+            ret = res.GetString(text, ci);
+        }
+        catch
+        {
+            ret = text;
+        }
+        return ret;
+    }
+    protected void ddl_MutiLanguage_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        ChangeLanguage();
+
+    }
+    protected void ChangeLanguage()
+    {
+        lbLearningPoint.Text = this.MultiLanguage("LearningPointsTree");
+        btnFinishEdit.Text = this.MultiLanguage("Finish");
+        btCancelEdit.Text = this.MultiLanguage("Cancel");
+        btAdd.Text = this.MultiLanguage("Add");
+        btDelet.Text = this.MultiLanguage("Delete");
+        btModify.Text = this.MultiLanguage("Modify");
+        //Lb_VPAns.Text = this.MultiLanguage("VPAnsTitle");
+        //btnEditVPAns.Value = this.MultiLanguage("BtnEditVPAns");
+        //Lb_Conversation.Text = this.MultiLanguage("Conversation");
+        //Lb_VPAnswer.Text = this.MultiLanguage("VPAnswer");
+        //BtnBack.Text = this.MultiLanguage("BtnBack");
+        //BtnNext.Value = this.MultiLanguage("BtnNext");
+        //BtnClose.Value = this.MultiLanguage("BtnClose");
+        //btnAutoSetScore.Value = this.MultiLanguage("btnAutoSetScore");
+        //lbTotalScore.Text = this.MultiLanguage("lbTotalScore");
+        //LbCurrentScoreTitle.Text = this.MultiLanguage("LbCurrentScoreTitle");
+    }
+}

@@ -1,0 +1,202 @@
+<%@ Reference Page="~/AuthoringTool/BasicForm/BasicForm.aspx" %>
+<%@ Page language="c#" CodeFile="ShowQuestion.aspx.cs" validateRequest="false" AutoEventWireup="false" Inherits="AuthoringTool.CommonQuestionEdit.EditSortedAskItem" smartNavigation="False" %>
+
+<HTML>
+	<HEAD runat="server">
+		<title>EditSortedAskItem</title>
+		<meta content="Microsoft Visual Studio .NET 7.1" name="GENERATOR">
+		<meta content="C#" name="CODE_LANGUAGE">
+		<meta content="JavaScript" name="vs_defaultClientScript">
+		<meta content="http://schemas.microsoft.com/intellisense/ie5" name="vs_targetSchema">
+		<script language="javascript">
+		  var currentEditQuestion = <%=Session["CurrentEditQuestionNum"].ToString()%>;
+		  var totalQuestionNum = <%=Session["totalQuestionNum"].ToString()%>;
+		  var Question_Edit_Type = '<%=Question_Edit_Type%>';
+		  function setEditButton()
+		  {
+		      if(currentEditQuestion==0)
+			  {
+			  	  document.all('PreQusBtn').disabled = true;
+		 	  }
+		 	  else
+		 	  {
+		 	      document.all('PreQusBtn').disabled = false; 
+		 	  }
+		 	  document.all('NewItemButton_1').style.display='none';
+		  }
+		  function setLayoutTable()
+		  {
+		      document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='';
+		  }
+		  function window_onload()
+		  {   
+		      if(Question_Edit_Type=="Group_Question")
+		      {		     
+		         setEditButton();
+		         setLayoutTable();
+		      }
+		  }
+		  function nextQuestion()
+		  {		      
+		      document.all('recordCurrentEditQuestionNum').value = parseInt(document.all('recordCurrentEditQuestionNum').value) + 1;
+		      currentEditQuestion++;
+		      if(currentEditQuestion==totalQuestionNum)
+		      {
+		          event.srcElement.style.cursor = 'wait';
+		          window.setTimeout('clickNewItemButton_1()',1000);
+		      }
+		      else
+		      {	
+		          document.all('LayoutTable_1').rows[currentEditQuestion+1].style.display='none';          
+		          document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='';
+		      }
+		      setEditButton();
+		  }
+		  function clickNewItemButton_1()
+		  {
+		      document.all('NewItemButton_1').click();
+		  }
+		  function previousQuestion()
+		  {
+		      document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='none';
+		      document.all('recordCurrentEditQuestionNum').value = parseInt(document.all('recordCurrentEditQuestionNum').value) - 1;
+		      currentEditQuestion--;
+		      document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='';
+		      setEditButton();
+		      
+		  }
+		  function ExitPage()
+		  {
+		      //document.getElementById('btnExitPage').click();  
+		  }
+		  function EditSummary()
+		  {
+			 document.location.href = "EditSummary.aspx?returnPage=ShowQuestion.aspx";
+		  }
+		  original_FormAction = "";
+		  function changeFormAction()
+		  {
+		      //改變Form的Action
+		      original_FormAction = Form1.target;
+		      //先取得原本Form的Action
+		      Form1.target = 'sub_frame';
+		      //之後再還原Form的Action
+		      window.setTimeout('resetFormAction()',500);
+		  }
+		  function resetFormAction()
+		  {
+		      Form1.target = original_FormAction;
+		  }		  
+		  function displaySubQuestion(questonTableID)
+		  {	
+		     //try
+		     //{ 	  
+		        var sub_row_num = document.all(questonTableID).rows.length;
+		        var sub_question = null;
+		        for(var i=1;i<sub_row_num;i++)
+		        {    
+					sub_question = document.all(questonTableID).rows[i];
+					if(sub_question.style.display=='none')
+					{
+						sub_question.style.display='';
+						if(i==1)
+						{
+						   event.srcElement.src = "../image/minus.gif";
+						   document.all('recordDisplayItemID').value += questonTableID + ";";
+						}
+					}
+					else
+					{
+						sub_question.style.display='none';  
+						if(i==1)
+						{       
+						   event.srcElement.src = "../image/plus.gif";
+						   document.all('recordDisplayItemID').value = document.all('recordDisplayItemID').value.replace(questonTableID + ';','');
+						}
+					}
+				}
+			 //}
+			 //catch(e){}	
+			 
+			function goBack()
+			{
+			/*
+				var Back = "";
+				if(document.getElementById("hiddenOpener") != null)
+				{
+					Back = document.getElementById("hiddenOpener").value + ".aspx";
+				}
+				location.href=Back;
+			*/
+				location.href = "Paper_NewOrNot.aspx?Opener=ShowQuestion";
+			}
+			
+			function goNext()
+			{
+				var strPresentType = "";
+				if(document.getElementById("hiddenPresentType") != null)
+				{
+					strPresentType = document.getElementById("hiddenPresentType").value;
+				}
+				
+				var strQuestionMode = "";
+				if(document.getElementById("hiddenQuestionMode") != null)
+				{
+					strQuestionMode = document.getElementById("hiddenQuestionMode").value;
+				}
+				
+				var strEditMode = "";
+				if(document.getElementById("hiddenEditMode") != null)
+				{
+					strEditMode = document.getElementById("hiddenEditMode").value;
+				}
+				
+				if(strPresentType == "Edit")
+				{
+					if(strQuestionMode == "General")
+					{
+						if(strEditMode == "Manual")
+						{
+							location.href = "Paper_OtherQuestion.aspx?Opener=ShowQuestion";
+						}
+						else
+						{
+							location.href = "Paper_RandomSelect.aspx?Opener=ShowQuestion";
+						}
+					}
+					else
+					{
+						location.href = "Paper_OtherQuestion.aspx?Opener=ShowQuestion";
+					}
+				}
+				else
+				{
+					location.href = "Paper_RandomSelect.aspx?Opener=ShowQuestion";
+				}
+			}		      
+		  }
+		</script>
+	</HEAD>
+	<body onload="window_onload();" onunload="ExitPage();">
+		<FORM id="Form1" method="post" runat="server">
+			<INPUT id="recordDisplayItemID" style="WIDTH: 240px; HEIGHT: 22px" type="hidden" 
+				value="此欄為用來記錄哪些Item Row是展開的" name="recordDisplayItemID" runat="server"> 
+			<INPUT id="recordCurrentEditQuestionNum" type="hidden" runat="server">
+			<INPUT id="PreQusBtn" style="WIDTH: 136px; HEIGHT: 26px" type="button" value="Previous Question"
+				onclick='previousQuestion()' name="Button1" runat="server"> 
+			<INPUT id="NextQusBtn" style="WIDTH: 136px; HEIGHT: 26px" type="button" value="Next Question"
+				onclick='nextQuestion()' name="Button2" runat="server">
+			<br>
+			<input id="btnPre" style="WIDTH: 80px; HEIGHT: 30px" onclick="goBack();" type="button"
+				value="<< Back" name="btnPre"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<input id="btnNext" style="WIDTH: 80px; HEIGHT: 30px" onclick="goNext();" type="button"
+				value="Next >>" name="btnNext"> 
+			<input id="hiddenOpener" type="hidden" name="hiddenOpener" runat="server">
+			<input id="hiddenEditMode" type="hidden" name="hiddenEditMode" runat="server"> 
+			<input id="hiddenQuestionMode" type="hidden" name="hiddenQuestionMode" runat="server">
+			<input id="hiddenPresentType" type="hidden" name="hiddenPresentType" runat="server">
+			<input type="hidden" id="hiddenGroupID" name="hiddenGroupID" runat="server">
+		</FORM>
+		<iframe id="sub_frame" name="sub_frame" frameBorder="0" width="0%" height="0%"></iframe>
+	</body>
+</HTML>

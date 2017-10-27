@@ -1,0 +1,477 @@
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Web;
+using System.Web.SessionState;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.UI.HtmlControls;
+using suro.util;
+
+namespace AuthoringTool.CommonQuestionEdit
+{
+	/// <summary>
+	/// EditSortedAskItem 的摘要描述。
+	/// </summary>
+    public partial class EditSortedAskItem : AuthoringTool_BasicForm_BasicForm
+	{
+		DropDownList Question_Edit_Type_DDL = null;
+		public string Question_Edit_Type = "";//Question的編輯型態;有問診的編輯型態:Interrogation_Enquiry,選擇題的編輯型態:Choice_Question,Script問題的編輯型態:Script_Question	
+        protected System.Web.UI.WebControls.Table LayoutTable = new Table();
+		protected suro.util.SqlDB sqlDB=new SqlDB(System.Configuration.ConfigurationSettings.AppSettings["connstr"]);
+		private string CaseID;
+		private string ClinicNum;
+		private string SectionName;
+		private string UserID;
+		private QuestionAccessor qAccessor = null;
+		private QuestionSelectionAccessor qsAccessor = null;
+		public DataTable QuestionIndex = null;
+		public DataTable SelectionLinkQID = null;
+        //protected System.Web.UI.WebControls.Label Label1;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden recordDisplayItemID;
+        //protected System.Web.UI.HtmlControls.HtmlInputButton PreQusBtn;
+        //protected System.Web.UI.HtmlControls.HtmlInputButton NextQusBtn;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden recordCurrentEditQuestionNum;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden hiddenOpener;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden hiddenEditMode;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden hiddenQuestionMode;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden hiddenPresentType;
+        //protected System.Web.UI.HtmlControls.HtmlInputHidden hiddenGroupID;
+		public DataTable QuestionSelectionIndex = null;
+
+		private void Page_Load(object sender, System.EventArgs e)
+		{
+            this.Initiate();
+
+			//設定網頁所需之參數
+			init();			
+			//開始至資料庫讀取問題以及問題的選項,並將問題按照父子關係呈現至HTML的Table中,以呈現至前端
+			ProcessData();
+			this.FindControl("Form1").Controls.Add(LayoutTable);
+			this.FindControl("Form1").Controls.Add(this.ParseControl("<hr>"));
+			this.FindControl("Form1").Controls.Add(this.getEditQuestionButton());
+		}
+
+		#region Web Form 設計工具產生的程式碼
+		override protected void OnInit(EventArgs e)
+		{
+			//
+			// CODEGEN: 此為 ASP.NET Web Form 設計工具所需的呼叫。
+			//
+			InitializeComponent();
+			base.OnInit(e);
+		}
+		
+		/// <summary>
+		/// 此為設計工具支援所必須的方法 - 請勿使用程式碼編輯器修改
+		/// 這個方法的內容。
+		/// </summary>
+		private void InitializeComponent()
+		{  
+			this.Load += new System.EventHandler(this.Page_Load);
+
+		}
+		#endregion
+		/// <summary>
+		/// 設定網頁所需之參數
+		/// </summary>
+		private void init()
+		{
+			UserID = Session["UserID"].ToString();
+			InititateLayoutTable();
+			Question_Edit_Type = this.getQuestion_Edit_Type();
+			recordDisplayItemID.Value = "";			
+			if(Question_Edit_Type=="Group_Question")
+			{
+				if(Session["CurrentEditQuestionNum"]==null)
+				{
+					Session.Add("CurrentEditQuestionNum",0);//記錄目前使用者正要編輯哪個問題
+					recordCurrentEditQuestionNum.Value = Session["CurrentEditQuestionNum"].ToString();
+				}
+				else if(recordCurrentEditQuestionNum.Value!="")
+				{
+					Session["CurrentEditQuestionNum"] = Convert.ToInt32(recordCurrentEditQuestionNum.Value);
+				}
+
+				if(Session["PostBackFrequency"]==null)
+				{
+					Session.Add("PostBackFrequency",0);//記錄此網頁PostBack的次數
+				}
+				else
+				{
+					Session["PostBackFrequency"] = Convert.ToInt32(Session["PostBackFrequency"]) + 1;
+				}
+			}
+
+			if(!IsPostBack)
+			{				
+				ViewState.Add("Question_Edit_Type",Question_Edit_Type);
+				initQuestion_Selection_Accessor();				
+			}
+			else
+			{
+				if(Question_Edit_Type==ViewState["Question_Edit_Type"].ToString())
+				{
+					qAccessor = (QuestionAccessor)Session["QuestionAccessor"];
+					qsAccessor = (QuestionSelectionAccessor)Session["QuestionSelectionAccessor"];
+				}
+				else
+				{
+					ViewState["Question_Edit_Type"] = Question_Edit_Type;
+					initQuestion_Selection_Accessor();
+				}
+			}	
+	
+			//Opener
+			if(Request.QueryString["Opener"] != null)
+			{
+				hiddenOpener.Value = Request.QueryString["Opener"].ToString();
+			}
+
+			//PresentType
+			if(Session["PresentType"] != null)
+			{
+				hiddenPresentType.Value = Session["PresentType"].ToString();
+			}
+		
+			//QuestionType
+			if(Session["QuestionMode"] != null)
+			{
+				hiddenQuestionMode.Value = Session["QuestionMode"].ToString();
+			}
+
+			//EditMode
+			if(Session["EditMode"] != null)
+			{
+				hiddenEditMode.Value = Session["EditMode"].ToString();
+			}
+		}
+		
+		/// <summary>
+		/// //建構問題選擇物件和問題選項選擇物件
+		/// </summary>
+		private void initQuestion_Selection_Accessor()
+		{			
+			qAccessor = new QuestionAccessor(Question_Edit_Type,getQuestionAccessParameter());
+            qsAccessor = new QuestionSelectionAccessor(qAccessor, Question_Edit_Type);				
+			Session.Add("QuestionSelectionAccessor",qsAccessor);
+			Session.Add("QuestionAccessor",qAccessor);
+		}
+
+		/// <summary>
+		/// 取得至資料表擷取問題所需的條件的Hashtable
+		/// </summary>
+		private Hashtable getQuestionAccessParameter()
+		{
+			if(this.Question_Edit_Type=="Script_Question")
+			{
+				Hashtable ret = new Hashtable();
+				ArrayList fieldIndex = new ArrayList();//至資料表擷取問題的資料表欄位索引
+				ret.Add("cScriptField","Present illness");
+				fieldIndex.Add("cScriptField");
+				ret.Add("cLanguage","English");
+				fieldIndex.Add("cLanguage");
+				ret.Add("FieldIndex",fieldIndex);
+				return ret;
+			}
+			else if(this.Question_Edit_Type=="Group_Question")
+			{
+				Hashtable ret = new Hashtable();
+				ArrayList fieldIndex = new ArrayList();//至資料表擷取問題的資料表欄位索引
+				ret.Add("cDivisionID",Session["GroupDivisionID"].ToString());
+				fieldIndex.Add("cDivisionID");
+				ret.Add("cQuestionGroupID",Session["GroupID"].ToString());
+				fieldIndex.Add("cQuestionGroupID");
+				ret.Add("cQuestionType","1");
+				fieldIndex.Add("cQuestionType");
+				ret.Add("cQuestionMode",Session["QuestionMode"].ToString());
+				fieldIndex.Add("cQuestionMode");
+				ret.Add("FieldIndex",fieldIndex);
+				return ret;
+			}
+			else
+			{
+				Hashtable ret = new Hashtable();
+				ArrayList fieldIndex = new ArrayList();//至資料表擷取問題的資料表欄位索引
+				ret.Add("cCaseID",CaseID);
+				fieldIndex.Add("cCaseID");
+				ret.Add("cSectionName",SectionName);
+				fieldIndex.Add("cSectionName");
+				ret.Add("sClinicNum",ClinicNum);
+				fieldIndex.Add("sClinicNum");
+				ret.Add("FieldIndex",fieldIndex);
+				return ret;
+			}
+		}
+
+		/// <summary>
+		/// 取得所要編輯問題的型態
+		/// 問診的編輯型態:Interrogation_Enquiry,選擇題的編輯型態:Choice_Question,Script問題的編輯型態:Script_Question
+		/// </summary>
+		private string getQuestion_Edit_Type()
+		{			
+			string Question_Edit_Type = "Group_Question";
+			if(!this.IsPostBack)
+			{
+				Question_Edit_Type = Question_Edit_Type_DDL.SelectedValue;
+			}
+			else
+			{
+				Question_Edit_Type = Request.Form["Question_Edit_Type_DDL"];
+			}
+			return Question_Edit_Type;
+		}
+
+		/// <summary>
+		/// 開始至資料庫讀取問題以及問題的選項,並將問題按照父子關係呈現至HTML的Table中,以呈現至前端
+		/// </summary>
+		private void ProcessData()
+		{	
+			string QID = "";  
+			if(this.Question_Edit_Type=="Group_Question" && !Convert.ToBoolean(Session["bModify"]) && !this.IsPostBack)
+			{
+				QID = CommonQuestionUtility.GetNewID(this.UserID,"Question");    //下面回圈所處理問題ID		
+				this.qAccessor.add_New_Question(QID);
+				string[] new_SelectionID = CommonQuestionUtility.GetNewID(this.UserID,"Selection",4);//新增的選項ID
+				for(int i=0;i<4;i++)
+				{
+					this.qsAccessor.add_new_selection(QID,new_SelectionID[i]);
+				}				
+			}
+			DataRow[] drs = qAccessor.QuestionIndex.Select("sLevel=1"); //取得第一階層的起始問題
+			QuestionItemControlTable qItemControlTable = null;//QuestionItemControlTable
+			//			string LevelAndRank = "";
+			   //下面回圈所處理問題ID
+			string QuestionText = "";
+			if(this.Question_Edit_Type=="Group_Question")
+			{				
+				if(Session["totalQuestionNum"]==null)
+				{
+					Session.Add("totalQuestionNum",drs.Length);
+				}
+				else
+				{
+					Session["totalQuestionNum"] = drs.Length;
+				}
+				if(!Convert.ToBoolean(Session["bModify"]))
+				{
+					Session["CurrentEditQuestionNum"] = Convert.ToInt32(Session["totalQuestionNum"])-1;
+				}
+
+			}
+			
+			for(int i=0;i<drs.Length;i++)//開始針對每個問題作處理
+			{
+				QID = drs[i]["cQID"].ToString();                //問題ID
+				set_recordDisplayItemID(QID);
+				QuestionText = drs[i]["cQuestion"].ToString();  //問題內容
+				//LevelAndRank = CommonQuestionUtility.FillZero(i+1,4);
+				qItemControlTable = new QuestionItemControlTable(this.Question_Edit_Type,this.UserID,QID,QuestionText,this,1,this.recordDisplayItemID);				
+				this.LayoutTable.Rows.Add(new TableRow());
+				this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells.Add(new TableCell());
+				this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells[0].Controls.Add(qItemControlTable);
+				if(this.Question_Edit_Type=="Group_Question")
+				{
+					this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Style.Add("display","none");
+				}
+			}
+
+//			if(!this.IsPostBack)
+//			{
+//				if(!Convert.ToBoolean(Session["bModify"]))
+//				{
+//////////////////////newFirstLevelQuestion();
+//					//QuestionItemControlTable qItemControlTable = null;//QuestionItemControlTable
+//					QID = CommonQuestionUtility.GetNewID(this.UserID,"Question");    //下面回圈所處理問題ID						
+//					qItemControlTable = new QuestionItemControlTable(this.Question_Edit_Type,this.UserID,QID,"",this,1);
+//					this.LayoutTable.Rows.Add(new TableRow());
+//					this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells.Add(new TableCell());
+//					this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells[0].Controls.Add(qItemControlTable);
+//					this.qAccessor.add_New_Question(QID);
+//					qItemControlTable.addQuestionAnswer(this.Page);
+//
+//					if(!Convert.ToBoolean(Session["bModify"]))
+//					{
+//						Session["CurrentEditQuestionNum"] = Convert.ToInt32(Session["totalQuestionNum"]);
+//					}
+//					Session["totalQuestionNum"] = Convert.ToInt32(Session["totalQuestionNum"]) + 1;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                  
+//					PreQusBtn.Visible = false;
+//				}
+//			}
+		}
+
+		private void set_recordDisplayItemID(string strQID)
+		{
+			if(this.Question_Edit_Type == "Group_Question")
+			{
+				if(recordDisplayItemID.Value=="")
+				{
+					recordDisplayItemID.Value = "QuestionItemTable@" + strQID + ";";
+				}
+				else
+				{
+					recordDisplayItemID.Value = recordDisplayItemID.Value + "QuestionItemTable@" + strQID + ";";
+				}
+			}
+		}
+
+		/// <summary>
+		/// 初始化要呈現給使用者操作的介面,因為使用者要操作的介面排版住要是利用LayoutTable來安排位置
+		/// </summary>
+		private void InititateLayoutTable()
+		{
+			//LayoutTable的設定
+			//第一列
+			LayoutTable.Width=Unit.Percentage(100);
+			LayoutTable.ID="LayoutTable_1";
+			LayoutTable.Rows.Add(new TableRow());
+			LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells.Add(new TableCell());
+			Label Title = new Label();
+			Title.Text = "Question Editor";
+			Title.Font.Size = FontUnit.Parse("25");
+			Title.ForeColor = Color.DarkRed;
+			LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells[0].Controls.Add(Title);
+
+
+			//第二列
+			LayoutTable.Rows.Add(new TableRow());
+			LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells.Add(new TableCell());
+			Table container = CommonQuestionUtility.get_HTMLTable(1,2);
+
+			Label questionTypeLabel = new Label();
+			questionTypeLabel.Text = "<b>Question Type:&nbsp;</b>";
+
+			//選擇編輯模式的下拉式選單
+			Question_Edit_Type_DDL = getQuestion_Edit_Type_DDL();
+
+			
+			//新增問題的Button
+			Button btnNew = new Button();
+			btnNew.BackColor = Color.FromName("#FF9933");
+			btnNew.Width = Unit.Pixel(140);
+			btnNew.Text ="Add New Question";
+			btnNew.ID = "NewItemButton_1";
+			btnNew.Click += new EventHandler(btnNew_Click);			
+
+			container.Rows[container.Rows.Count-1].Cells[0].Controls.Add(questionTypeLabel);
+			container.Rows[container.Rows.Count-1].Cells[0].Controls.Add(Question_Edit_Type_DDL);
+			container.Rows[container.Rows.Count-1].Cells[1].Controls.Add(btnNew);
+			container.Rows[container.Rows.Count-1].Cells[1].Width = Unit.Parse("10%");
+
+			LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells[0].Controls.Add(container);
+		}
+
+		/// <summary>
+		/// 取得Finish Button
+		/// </summary>
+		private Control getEditQuestionButton()
+		{
+			if(this.Question_Edit_Type=="Group_Question")
+			{
+				Table container = new Table();
+				container.Rows.Add(new TableRow());
+				container.Rows[container.Rows.Count-1].Cells.Add(new TableCell());
+				container.Rows[container.Rows.Count-1].Cells.Add(new TableCell());
+				if(!Convert.ToBoolean(Session["bModify"]))
+				{
+					//PreQusBtn.Style.Add("width","1px");
+					//PreQusBtn.Style.Add("height","1px");
+				}
+				container.Rows[container.Rows.Count-1].Cells[0].Controls.Add(PreQusBtn);
+				container.Rows[container.Rows.Count-1].Cells[1].Controls.Add(NextQusBtn);
+				return container;
+			}
+			else
+			{
+				PreQusBtn.Visible = true;
+				NextQusBtn.Visible = true;
+				ImageButton finishBtn = new ImageButton();
+				finishBtn.ID = "finishBtn";
+				finishBtn.ImageAlign = ImageAlign.Right;
+				finishBtn.ImageUrl = "../Image/finish.gif";
+				finishBtn.Click +=new ImageClickEventHandler(finishBtn_Click);
+				return finishBtn;
+			}		
+		}		
+
+		/// <summary>
+		/// 選擇編輯模式的下拉式選單
+		/// </summary>
+		private DropDownList getQuestion_Edit_Type_DDL()
+		{
+			DropDownList ret = new DropDownList();
+			ret.ID = "Question_Edit_Type_DDL";
+			ret.AutoPostBack = true;
+			ret.SelectedIndexChanged +=new EventHandler(ret_SelectedIndexChanged);
+			//Question的編輯型態;有問診的編輯型態:Interrogation_Enquiry,選擇題的編輯型態:Choice_Question,Script問題的編輯型態:Script_Question
+			ret.Items.Add(new ListItem("Interrogation Enquiry","Interrogation_Enquiry"));
+			ret.Items.Add(new ListItem("GroupQuestion","Group_Question"));
+			ret.Items.Add(new ListItem("Choice Question","Choice_Question"));
+			ret.Items.Add(new ListItem("Script Question","Script_Question"));
+			ret.SelectedIndex = 1;
+			ret.Style.Add("display","none");
+			return ret;
+		}
+
+		private void FinishSave()
+		{			
+			if(!Page.IsStartupScriptRegistered("FinishScript"))
+			{
+				string scriptStr = "\n<script language=JavaScript>\n";					
+				scriptStr += "   alert('Save successfully!');\n";
+				scriptStr += "<";
+				scriptStr += "/";
+				scriptStr += "script>";
+				Page.RegisterStartupScript("FinishScript", scriptStr);
+			}
+		}
+
+		private void newFirstLevelQuestion()
+		{
+			QuestionItemControlTable qItemControlTable = null;//QuestionItemControlTable
+			string QID = CommonQuestionUtility.GetNewID(this.UserID,"Question");    //下面回圈所處理問題ID						
+			qItemControlTable = new QuestionItemControlTable(this.Question_Edit_Type,this.UserID,QID,"",this,1,this.recordDisplayItemID);
+			this.LayoutTable.Rows.Add(new TableRow());
+			this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells.Add(new TableCell());
+			this.LayoutTable.Rows[LayoutTable.Rows.Count-1].Cells[0].Controls.Add(qItemControlTable);
+			this.qAccessor.add_New_Question(QID);
+			qItemControlTable.addQuestionAnswer(this.Page);
+
+			if(!Convert.ToBoolean(Session["bModify"]))
+			{
+				Session["CurrentEditQuestionNum"] = Convert.ToInt32(Session["totalQuestionNum"]);
+			}
+			Session["totalQuestionNum"] = Convert.ToInt32(Session["totalQuestionNum"]) + 1;
+		}
+
+		/// <summary>
+		/// 新增一個問題的事件處理函式
+		/// </summary>
+		private void btnNew_Click(object sender, EventArgs e)
+		{			
+			newFirstLevelQuestion();			
+		}	
+	
+		private void finishBtn_Click(object sender, ImageClickEventArgs e)
+		{
+			this.qAccessor.update_DataTableIntoDatabase();
+			this.qsAccessor.update_DataTableIntoDatabase();
+			this.qAccessor.update_QuestionSource_In_Database();
+			FinishSave();
+		}
+
+		private void btnExitPage_Click(object sender, System.EventArgs e)
+		{
+			
+		}
+
+		private void ret_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			
+		}
+	}
+}

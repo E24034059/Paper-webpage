@@ -1,0 +1,367 @@
+using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Web;
+using System.Web.SessionState;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.UI.HtmlControls;
+using suro.util;
+using AuthoringTool.CommonQuestionEdit;
+
+namespace WebApplication1.GroupQuestion
+{
+	/// <summary>
+	/// GroupQuestion 的摘要描述。
+	/// </summary>
+	public class GroupQuestion : System.Web.UI.Page
+	{
+		protected string clientScript = "";
+		protected string AuthorName = "";
+		protected System.Web.UI.WebControls.DropDownList ddl_Div_Select;		
+		protected System.Web.UI.WebControls.ListBox list_availableQuestion;
+		protected System.Web.UI.WebControls.ListBox lisb_selectedQuestion;
+		protected ProgStudios.WebControls.ComboBox ddl_Group_Select;
+		protected System.Web.UI.WebControls.ImageButton btn_forSelected;
+		protected System.Web.UI.WebControls.ImageButton btn_forAvailable;
+		protected System.Web.UI.WebControls.Label Label1;
+		protected System.Web.UI.WebControls.Label Label2;
+		private SqlDB sqldb = new SqlDB("server=localhost; database=hintsdatabase20050513; uid=hints; pwd=mirac");
+	
+		private void Page_Load(object sender, System.EventArgs e)
+		{				
+			if(!this.IsPostBack)
+			{				
+				init();
+			}
+		}
+
+		private void init()
+		{
+			SetSessionVariable();
+			SetPageAttribute();
+			BindDropDownList();
+			BindListBox();
+		}
+
+		/// <summary>
+		/// 設定Session變數
+		/// </summary>
+		private void SetSessionVariable()
+		{
+			Session.Add("DivisionID","0101");
+			Session.Add("AuthorName","alivs");
+		}
+
+		//根據QueryString來設定Page Classd的參數
+		private void SetPageAttribute()
+		{
+//			QuestionSourceTable = this.Request.QueryString["QuestionSourceTable"] + "";
+//			QIDField = this.Request.QueryString["QIDField"] + "";
+			AuthorName = this.Request.QueryString["AuthorName"] + "";
+		}
+
+		/// <summary>
+		/// 1.初始化供使用者選擇科別的下拉式選單
+		/// 2.初始化供使用者選擇問題組別的下拉式選單
+		/// </summary>
+		private void BindDropDownList()
+		{
+//			//取得Hints中的所有科別,供使用者選擇科別
+//			string strSQL = "SELECT cDivisionID,cDivisionName FROM Division";
+//			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+//			foreach(DataRow dr in dt.Rows)
+//			{
+//				this.ddl_Div_Select.Items.Add(new ListItem(dr["cDivisionName"].ToString(),dr["cDivisionID"].ToString()));
+//			}
+			Bind_ddl_Group_Select();
+		}
+
+		/// <summary>
+		/// 將科別內所有問題的組別名稱繫結到"ddl_Group_Select"下拉式選單
+		/// </summary>
+		private void Bind_ddl_Group_Select()
+		{
+			this.ddl_Group_Select.Items.Clear();
+			this.ddl_Group_Select.Value = "";
+			//取得科別內所有問題的組別
+			string strSQL = "SELECT DISTINCT ISNULL(cQuestionGroupName,'') AS cQuestionGroupName,ISNULL(cQuestionGroupID,'') AS cQuestionGroupID FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"'";
+			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+			foreach(DataRow dr in dt.Rows)
+			{
+				if(!dr["cQuestionGroupName"].ToString().Equals(""))
+				{
+					this.ddl_Group_Select.Items.Add(new ListItem(dr["cQuestionGroupName"].ToString(),dr["cQuestionGroupID"].ToString()));
+				}
+			}
+		}	
+
+//		private void BindListBox()
+//		{
+//			//取得尚未分組的問題
+//			string strSQL_Left = "(SELECT "+QIDField+" AS cQID FROM "+QuestionSourceTable+" WHERE cDivisionID='"+this.ddl_Div_Select.SelectedValue+"')A";
+//          string strSQL_Right = "(SELECT cQID,cQuestionText FROM QuestionIndex WHERE sLevel=1)B";
+//			string strSQL_QID_AvailableGroup = "SELECT cQID FROM QuestionMode WHERE cDivisionID='"+this.ddl_Div_Select+"'";//此段SQL語法可以取得哪些Question已經分組
+//			string strSQL = "SELECT A.cQID,B.cQuestionText FROM "+strSQL_Left+" LEFT JOIN "+strSQL_Right+" ON A.cQID=B.cQID WHERE B.cQID NOT IN ("+strSQL_QID_AvailableGroup+")";//此段SQL語法可以取得未分組的問題
+//			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+//			foreach(DataRow dr in dt.Rows)
+//			{
+//				this.list_availableQuestion.Items.Add(new ListItem(dr["cQuestionText"].ToString(),dr["cQID"].ToString()));
+//			}
+//			
+//			//取得已經選擇問題組別的所有問題
+//			strSQL_Left = "(SELECT cQID FROM QuestionMode WHERE cDivisionID='"+this.ddl_Div_Select+"' AND cQuestionGroupID='"+this.ddl_Group_Select.Items[ddl_Group_Select.SelectedIndex].Value+"')A";
+//            strSQL_Right = "(SELECT cQID,cQuestionText FROM QuestionIndex)B";
+//			strSQL = "SELECT A.cQID,B.cQuestionText FROM "+strSQL_Left+" LEFT JOIN "+strSQL_Right+" ON A.cQID=B.cQID";
+//		    dt = sqldb.getDataSet(strSQL).Tables[0];
+//			foreach(DataRow dr in dt.Rows)
+//			{
+//				this.ddl_Group_Select.Items.Add(new ListItem(dr["cQuestionText"].ToString(),dr["cQID"].ToString()));
+//			}
+//		}
+
+		private void BindListBox()
+		{
+			////取得尚未分組的問題
+			Bind_List_availableQuestion();
+			
+			//取得已經選擇問題組別的所有問題
+//			strSQL_Left = "(SELECT cQID FROM QuestionMode WHERE cDivisionID='"+this.ddl_Div_Select.SelectedValue+"' AND cQuestionGroupID='"+this.ddl_Group_Select.Items[ddl_Group_Select.SelectedIndex].Value+"')A";
+//			strSQL_Right = "(SELECT cQID,cQuestion FROM QuestionIndex WHERE sLevel=1)B";
+//			strSQL = "SELECT A.cQID,B.cQuestion FROM "+strSQL_Left+" INNER JOIN "+strSQL_Right+" ON A.cQID=B.cQID";
+//			dt = sqldb.getDataSet(strSQL).Tables[0];
+//			foreach(DataRow dr in dt.Rows)
+//			{
+//				this.ddl_Group_Select.Items.Add(new ListItem(dr["cQuestion"].ToString(),dr["cQID"].ToString()));
+//			}
+		}
+
+		/// <summary>
+		/// bind all question item which in specific group to "lisb_selectedQuestion"ListBox
+		/// </summary>
+		/// <param name="QuestionGroupID"></param>
+		private void Bind_Lisb_selectedQuestion(string QuestionGroupID)
+		{
+			this.lisb_selectedQuestion.Items.Clear();
+			string strSQL_Left = "(SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"' AND cQuestionGroupID='" + QuestionGroupID + "')A";
+			string strSQL_Right = "(SELECT * FROM QuestionIndex WHERE sLevel=1)B";
+			string strSQL = "SELECT A.cQID,B.cQuestion FROM "+strSQL_Left+" INNER JOIN "+strSQL_Right+" ON A.cQID=B.cQID";
+			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];				
+			foreach(DataRow dr in dt.Rows)
+			{
+				this.lisb_selectedQuestion.Items.Add(new ListItem(dr["cQuestion"].ToString(),dr["cQID"].ToString()));
+			}
+		}
+
+		/// <summary>
+		/// bind all question item which was not group to "lisb_selectedQuestion"ListBox
+		/// </summary>
+		/// <param name="QuestionGroupID"></param>
+		private void Bind_List_availableQuestion()
+		{
+			this.list_availableQuestion.Items.Clear();
+			//取得尚未分組的問題
+			string strSQL_Left = "(SELECT cQID FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"' AND (cQuestionGroupID IS NULL OR cQuestionGroupID=''))A";//此段SQL語法可以取得哪些Question已經分組
+			string strSQL_Right = "(SELECT cQID,cQuestion FROM QuestionIndex WHERE sLevel=1)B";
+			string strSQL = "SELECT A.cQID,B.cQuestion FROM "+strSQL_Left+" INNER JOIN "+strSQL_Right+" ON A.cQID=B.cQID";//此段SQL語法可以取得未分組的問題
+			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+			foreach(DataRow dr in dt.Rows)
+			{
+				this.list_availableQuestion.Items.Add(new ListItem(dr["cQuestion"].ToString(),dr["cQID"].ToString()));
+			}
+		}
+
+		#region Web Form 設計工具產生的程式碼
+		override protected void OnInit(EventArgs e)
+		{
+			//
+			// CODEGEN: 此為 ASP.NET Web Form 設計工具所需的呼叫。
+			//
+			InitializeComponent();
+			base.OnInit(e);
+		}
+		
+		/// <summary>
+		/// 此為設計工具支援所必須的方法 - 請勿使用程式碼編輯器修改
+		/// 這個方法的內容。
+		/// </summary>
+		private void InitializeComponent()
+		{ 
+			this.btn_forSelected.Click += new System.Web.UI.ImageClickEventHandler(this.btn_forSelected_Click);
+			this.btn_forAvailable.Click += new System.Web.UI.ImageClickEventHandler(this.btn_forAvailable_Click);
+			this.ddl_Group_Select.ServerChange += new System.EventHandler(this.ddl_Group_Select_ServerChange);
+			this.Load += new System.EventHandler(this.Page_Load);
+
+		}
+		#endregion
+
+		private void btn_forSelected_Click(object sender, System.Web.UI.ImageClickEventArgs e)
+		{
+			if(this.ddl_Group_Select.SelectedIndex==-1 && this.ddl_Group_Select.Value=="")
+			{
+				clientScript = "<script language='javascript'>alert('尚未輸入欲分組的組別名稱');</script>";
+			}
+			else
+			{
+				//至QuestionMode資料表中更新資料
+				string strSQL = "SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"'";
+				string GroupID = "";
+				string GroupName = "";
+				if(this.ddl_Group_Select.SelectedIndex==-1 && !IsGroupExist(this.ddl_Group_Select.Value))
+				{
+					GroupID = CommonQuestionUtility.GetNewID(AuthorName,"QuestionGroup");
+					GroupName = this.ddl_Group_Select.Value;
+				}
+				else
+				{
+					if(this.ddl_Group_Select.SelectedIndex!=-1)
+					{
+						GroupID = this.ddl_Group_Select.Items[this.ddl_Group_Select.SelectedIndex].Value;
+						GroupName = this.ddl_Group_Select.Items[this.ddl_Group_Select.SelectedIndex].Text;
+					}
+					else
+					{						
+						GroupName = this.ddl_Group_Select.Value;
+						GroupID = getGroupIDByGroupName(GroupName);
+					}
+				}				
+				DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+				DataRow[] drs = null;
+				DataRow[] sub_drs = null;
+				ArrayList sub_arrayList = null;
+				for(int i=this.list_availableQuestion.Items.Count-1;i>-1;i--)
+				{
+					if(this.list_availableQuestion.Items[i].Selected)
+					{						
+						drs = dt.Select("cQID='"+this.list_availableQuestion.Items[i].Value+"'");
+						foreach(DataRow dr in drs)
+						{
+							dr["cQuestionGroupID"] = GroupID;
+							dr["cQuestionGroupName"] = GroupName;
+							sub_arrayList = QuestionAccessor.getSubQIDArray(this.list_availableQuestion.Items[i].Value);
+							for(int j=0;j<sub_arrayList.Count;j++)
+							{
+								sub_drs = dt.Select("cQID='"+sub_arrayList[j].ToString()+"'");
+								foreach(DataRow sub_dr in sub_drs)
+								{
+									sub_dr["cQuestionGroupID"] = GroupID;
+									sub_dr["cQuestionGroupName"] = GroupName;
+								}
+							}
+						}
+						this.list_availableQuestion.Items.RemoveAt(i);
+					}
+				}
+				sqldb.Update(dt,"SELECT * FROM QuestionMode");			    
+				Bind_Lisb_selectedQuestion(GroupID);
+				Bind_ddl_Group_Select();
+			}
+		}
+		
+		/// <summary>
+		/// 判斷組別名稱是否存在
+		/// </summary>
+		/// <param name="GroupName">組別名稱</param>
+		/// <returns></returns>
+		private bool IsGroupExist(string GroupName)
+		{
+			string strSQL = "SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"' AND cQuestionGroupName='"+GroupName+"'";
+			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+			if(dt.Rows.Count>0)
+				return true;
+			else
+				return false;
+		}
+
+		/// <summary>
+		/// 取得組別名稱的GroupID
+		/// </summary>
+		/// <param name="GroupName">組別名稱</param>
+		/// <returns></returns>
+		private string getGroupIDByGroupName(string GroupName)
+		{
+			string ret = "";
+			string strSQL = "SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"' AND cQuestionGroupName='"+GroupName+"'";
+			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+			if(dt.Rows.Count>0)
+			{
+				ret = dt.Rows[0]["cQuestionGroupID"].ToString();
+			}
+			else
+			{
+				ret = CommonQuestionUtility.GetNewID(AuthorName,"QuestionGroup");
+			}
+			return ret;
+		}
+
+		private void btn_forAvailable_Click(object sender, System.Web.UI.ImageClickEventArgs e)
+		{
+			//至QuestionMode資料表中更新資料
+			string strSQL = "SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"'";
+			DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+			DataRow[] drs = null;
+			DataRow[] sub_drs = null;
+			ArrayList sub_arrayList = null;
+			for(int i=this.lisb_selectedQuestion.Items.Count-1;i>-1;i--)
+			{
+				if(this.lisb_selectedQuestion.Items[i].Selected)
+				{
+					drs = dt.Select("cQID='"+this.lisb_selectedQuestion.Items[i].Value+"'");
+					foreach(DataRow dr in drs)
+					{
+						dr["cQuestionGroupID"] = "";
+						dr["cQuestionGroupName"] = "";
+						sub_arrayList = QuestionAccessor.getSubQIDArray(this.lisb_selectedQuestion.Items[i].Value);
+						for(int j=0;j<sub_arrayList.Count;j++)
+						{
+							sub_drs = dt.Select("cQID='"+sub_arrayList[j].ToString()+"'");
+							foreach(DataRow sub_dr in sub_drs)
+							{
+								sub_dr["cQuestionGroupID"] = "";
+								sub_dr["cQuestionGroupName"] = "";
+							}
+						}
+					}
+					this.lisb_selectedQuestion.Items.RemoveAt(i);
+				}
+			}
+			sqldb.Update(dt,"SELECT * FROM QuestionMode");
+
+			//將"lisb_selectedQuestion"ListBox內的選到的Item移到"list_availableQuestion"ListBox內
+			Bind_List_availableQuestion();
+			Bind_ddl_Group_Select();
+		}
+
+		private void ddl_Group_Select_ServerChange(object sender, System.EventArgs e)
+		{
+			this.lisb_selectedQuestion.Items.Clear();
+			if(((ProgStudios.WebControls.ComboBox)sender).SelectedIndex!=-1)
+			{				
+				string GroupID = ((ProgStudios.WebControls.ComboBox)sender).Items[((ProgStudios.WebControls.ComboBox)sender).SelectedIndex].Value;//取得選擇到QuestionGroupID
+				string strSQL_Left = "(SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"' AND cQuestionGroupID='"+GroupID+"')A";
+				string strSQL_Right = "(SELECT * FROM QuestionIndex WHERE sLevel=1)B";
+				string strSQL = "SELECT A.cQID,B.cQuestion FROM "+strSQL_Left+" INNER JOIN "+strSQL_Right+" ON A.cQID=B.cQID";
+				DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+				foreach(DataRow dr in dt.Rows)
+				{
+					this.lisb_selectedQuestion.Items.Add(new ListItem(dr["cQuestion"].ToString(),dr["cQID"].ToString()));
+				}
+			}
+			else if(((ProgStudios.WebControls.ComboBox)sender).SelectedIndex==-1 && this.ddl_Group_Select.Value!="")
+			{
+				string strSQL = "SELECT * FROM QuestionMode WHERE cDivisionID='"+Session["DivisionID"].ToString()+"' AND cQuestionGroupName='"+this.ddl_Group_Select.Value+"'";
+				DataTable dt = sqldb.getDataSet(strSQL).Tables[0];
+				if(dt.Rows.Count>0)
+				{
+					clientScript = "<script language='javascript'>alert('此組別名稱已經存在,請重新輸入');</script>";
+				}
+				else
+				{					
+					//this.ddl_Group_Select.Items.Add(new ListItem(this.ddl_Group_Select.Value,CommonQuestionUtility.GetNewID(AuthorName,"QuestionGroup")));
+				}
+			}
+		}
+	}
+}

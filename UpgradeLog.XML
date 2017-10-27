@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="PaperSystem">
+</Property><Property Name="方案檔" Value="D:\Web_Share\WebHints\PaperSystem\PaperSystem.sln">
+</Property><Property Name="Date" Value="2006年6月21日">
+</Property><Property Name="Time" Value="下午 22:29:53">
+</Property></Properties><Event ErrorLevel="2" Project="PaperSystem.csproj" Source=" PaperSystem.csproj:(Error List)" Description="錯誤: 'recordDisplayItemID' 的成員宣告已移除，而且存取範圍已從 'public' 變更為 'protected'。若要從其他頁面存取這個成員，您必須為其建立 public 存取子屬性。    commonquestionedit\page\ShowQuestion.aspx.cs&#xA;">
+</Event><Event ErrorLevel="1" Project="PaperSystem.csproj" Source=" PaperSystem.csproj:(Warning List)" Description="警告: 這個 Web 專案已轉換成檔案架構的 Web 應用程式。如果您的網站包含了任何 IIS 中繼資訊 (如標記為虛擬目錄的子資料夾)，建議您關閉這個網站，然後使用 [開啟網站] 命令，再選取 [本機 IIS] 索引標籤，重新加以開啟。&#xA;">
+</Event><Event ErrorLevel="2" Project="PaperSystem.csproj" Source=" PaperSystem.csproj:(Error List)" Description="錯誤: 下列檔案未移轉，因為在專案檔中找不到這些檔案，或相關的 'BuildAction' 被設為 'None'。&#xA;您可能必須在完成轉換程序後，從專案中排除這些檔案，才能編譯您的網站: &#xA;檔案清單 == paper_mainfunction.aspx.cs,paper_headersetting.aspx,commonquestionedit\page\test.aspx.cs,&#xA;commonquestionedit\page\groupquestion.aspx,showquestion.aspx.cs,questiongrouptree\(new)questiongrouptree.aspx,commonquestionedit\page\test.aspx,paper_operate.aspx,&#xA;paper_operate.aspx.cs,stroehidden.aspx,showquestion.aspx,sequencemanager.aspx.cs,stroehidden.aspx.cs,paper_mainfunction.aspx,&#xA;commonquestionedit\複製 -dataaccessor\questionparameterfiller.cs,commonquestionedit\複製 -dataaccessor\questionselectionaccessor.cs,parameter.cs,&#xA;commonquestionedit\page\groupquestion.aspx.cs,commonquestionedit\複製 -dataaccessor\questionaccessor.cs,paper_headersetting.aspx.cs,sequencemanager.aspx。&#xA;">
+</Event><Event ErrorLevel="0" Project="PaperSystem.csproj" Source="PaperSystem.csproj" Description="已轉換。&#xA;可能發生某些必須手動解決的無法解析轉換問題。如需詳細資訊，請參考 http://go.microsoft.com/fwlink/?LinkId=46995 或搜尋說明主題 &lt;從 Visual Studio .NET 2002 或 2003 轉換&gt;。">
+</Event><Event ErrorLevel="3" Project="PaperSystem.csproj" Source="PaperSystem.csproj" Description="Converted">
+</Event></UpgradeLog>

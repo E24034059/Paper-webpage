@@ -1,0 +1,461 @@
+﻿using System;
+using System.Data;
+using System.Configuration;
+using System.Collections;
+using System.Web;
+using System.Web.Security;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.UI.WebControls.WebParts;
+using System.Web.UI.HtmlControls;
+using Hints.DB.Section;
+using Hints.DB;
+using PaperSystem;
+using Hints.DB.Conversation;
+
+public partial class AuthoringTool_CaseEditor_Paper_EditConversationAnswer : AuthoringTool_BasicForm_BasicForm
+{
+    protected string strTitle = "";
+    protected string strKind = "Kind:";
+    protected string strDataKind = "";
+    protected string strContent = "Content:";
+    protected string strDescription = "Description:";
+    protected string strKeyword = "Keyword:";
+    protected string strModifyDataKind = "";
+    protected string strEditPositation = "";
+    protected string strGroupID = "";
+    protected string strAnswer = "Answer:";
+
+    protected string strMode = "";
+    protected string strQID = "";
+    protected int iAnswerType = 0;
+    protected int iGroupSerialNum = 0;
+
+    protected clsInterrogationEnquiry mInterrogationObj;
+    protected string m_strCaseID = "";
+    protected string m_strSectionName = "";
+    protected int m_sClinicNum = 1;
+    protected int m_sAskItemWorkType = 1;
+    protected int m_sSectionKind = 0;
+    protected string strAID = "";
+
+    /// <summary>
+    /// Query string => Filename , RecentItemID , Mode , DataKind
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    protected void Page_Load(object sender, EventArgs e)
+    {
+
+        //進來這一頁的入口有四種
+        //1.從Authoring Tool -> Add Question or Add Answer
+        //2.Multimedia -> submit
+        //3.Modify or Delete
+        //4.從題庫部份編輯同義題編輯新的問題 //modify 20100825 
+        //if (Request.QueryString["FileName"] != null)//2.
+        if (hfFileUrl.Value != "")
+        {
+
+            strQID = hfQID.Value;
+            strMode = hfMode.Value;
+            //strQID = Request.QueryString["Item"];
+            //strMode = Request.QueryString["Mode"];
+            ddlQuestionKind.Items[1].Selected = true;
+            tbEditQuestion.Enabled = false;
+            //tbEditQuestion.Text = Request.QueryString["FileName"];
+            tbEditQuestion.Text = hfFileUrl.Value;
+            strEditPositation = Request.QueryString["EditPositation"];
+            strGroupID = Request.QueryString["GroupID"];
+            setEditMode(strMode);
+        }
+
+        else if (Request.QueryString["AID"] != null)
+        {
+            strQID = Request.QueryString["QID"];
+            strMode = Request.QueryString["Mode"];
+            strDataKind = Request.QueryString["DataKind"];
+            strEditPositation = Request.QueryString["EditPositation"];
+            strGroupID = Request.QueryString["GroupID"];
+            strAID = Request.QueryString["AID"];
+            iAnswerType = Convert.ToInt32(Request.QueryString["AnswerType"]);
+            iGroupSerialNum = Convert.ToInt32(DataReceiver.getQuestionGroupSerialNumByQuestionGroupID(strGroupID).ToString());
+
+            hfDataKind.Value = strDataKind;
+            hfQID.Value = strQID;
+            hfMode.Value = strMode;
+
+            m_strCaseID = this.usi.CaseID;
+            m_sClinicNum = this.usi.SourceClinicNum;
+            m_strSectionName = this.usi.Section;
+
+            setEditMode(strMode);
+
+        }
+
+        else
+        {
+            strQID = Request.QueryString["QID"];
+            strMode = Request.QueryString["Mode"];
+            strEditPositation = Request.QueryString["EditPositation"];
+            strGroupID = Request.QueryString["GroupID"];
+            iAnswerType = Convert.ToInt32(Request.QueryString["AnswerType"]);
+            iGroupSerialNum = Convert.ToInt32(DataReceiver.getQuestionGroupSerialNumByQuestionGroupID(strGroupID).ToString());
+            hfQID.Value = strQID;
+            hfMode.Value = strMode;
+
+            m_strCaseID = this.usi.CaseID;
+            m_sClinicNum = this.usi.SourceClinicNum;
+            m_strSectionName = this.usi.Section;
+
+            setEditMode(strMode);
+        }
+    }
+
+
+    protected void setRecentContent(string strQID, string strMode)
+    {
+        string strQuestionAnswer = "";
+        if (iAnswerType != 0)
+        {
+            string strAnswerTypeName = "";
+            DataTable dtConversation_AnswerType = clsConversation.Conversation_AnswerType_SELECT_AssignedAnswerType(iGroupSerialNum, iAnswerType);
+            if (dtConversation_AnswerType.Rows.Count > 0)
+            {
+                strAnswerTypeName = dtConversation_AnswerType.Rows[0]["cAnswerTypeName"].ToString();
+            }
+
+            strQuestionAnswer = clsConversation.Conversation_Question_SELECT_Question(strQID) + "$" + strAnswerTypeName;
+        }
+        else
+        {
+            string strAnswerTypeName = "";
+            DataTable dtConversation_AnswerType = clsConversation.Conversation_AnswerType_SELECT_AssignedAnswerType(iGroupSerialNum, iAnswerType);
+            if (dtConversation_AnswerType.Rows.Count > 0)
+            {
+                strAnswerTypeName = dtConversation_AnswerType.Rows[0]["cAnswerTypeName"].ToString();
+            }
+            strQuestionAnswer = clsConversation.Conversation_Question_SELECT_Question(strQID) + "$" + strAnswerTypeName;
+        }
+
+        if (strMode == "AddQuestion" || strMode == "ModifySynQ")
+        {
+            lbRecent.Text = strQuestionAnswer.Split('$')[0];
+        }
+        else if (strMode == "AddAnswer" || strMode == "ModifyAnswer")
+        {
+            lbRecent.Text = strQuestionAnswer.Split('$')[1];
+        }
+        else if (strMode == "AddNewQuestion")
+        {
+            trEditTarget.Style.Add("display", "none");
+            trOriginalAnswer.Style.Add("display", "");
+            ddlQuestionKind.Items.Remove("Multimedia");
+        }
+
+    }
+
+    protected void setEditMode(string strMode)
+    {
+        if (ddlQuestionKind.Text == "Chinese" || ddlQuestionKind.Text == "English")
+        {
+            btnAni.Visible = false;
+            tbEditQuestion.ReadOnly = false;
+            tbEditQuestion.Enabled = true;
+        }
+        else if (ddlQuestionKind.Text == "Multimedia")
+        {
+            btnAni.Visible = true;
+            tbEditQuestion.Enabled = false;
+            strContent = "Multimedia Name:";
+        }
+
+        setRecentContent(strQID, strMode);
+
+
+        ///////////////////////////////////////////////////////////////
+
+
+        //if (strQID.Contains("-"))
+        //{
+        //    strQID = strQID.Split('-')[1];
+        //}
+
+        if (strMode == "AddQuestion")
+        {
+            strTitle = "Add a new synonymous question";
+            strKind = "Question " + strKind;
+            strContent = "Question " + strContent;
+            strDescription = "Question " + strDescription;
+            strKeyword = "Question " + strKeyword;
+        }
+        else if (strMode == "AddAnswer")
+        {
+            strTitle = "Add a new answer";
+            strKind = "Answer " + strKind;
+            strContent = "Answer " + strContent;
+            //strDescription = "Answer " + strDescription;
+            //strKeyword = "Answer " + strKeyword;
+        }
+        else if (strMode == "ModifySynQ" || strMode == "ModifyAnswer" || strMode == "ModifyOriQ")
+        {
+
+            ddlQuestionKind.Visible = false;
+            strDataKind = Request.QueryString["DataKind"];
+            DataTable dtContent = new DataTable();
+
+            if (strMode == "ModifySynQ")
+            {
+
+                dtContent = clsInterrogationEnquiry.GetSynonymousItem("Question", strDataKind, strQID);
+                strTitle = "Modify the synonymous question";
+                trDatakind.Visible = true;
+                strModifyDataKind = strDataKind;
+                strContent = "Question " + strContent;
+                strDescription = "Question " + strDescription;
+                strKeyword = "Question " + strKeyword;
+            }
+            else if (strMode == "ModifyAnswer")
+            {
+
+                dtContent = clsConversation.Conversation_Answer_SELECT_Answer_QIDandAID(strQID, strAID);
+                strTitle = "Modify the answer";
+                trDatakind.Visible = true;
+                strModifyDataKind = strDataKind;
+                strContent = "Answer " + strContent;
+                strDescription = "Answer " + strDescription;
+                strKeyword = "Answer " + strKeyword;
+
+            }
+            else if (strMode == "ModifyOriQ")
+            {
+                strTitle = "Modify the original question";
+                trDatakind.Visible = true;
+                strModifyDataKind = strDataKind;
+                strContent = "Question " + strContent;
+                strAnswer = "Question" + strAnswer;
+                strDescription = "Question " + strDescription;
+                strKeyword = "Question " + strKeyword;
+
+                trEditTarget.Style.Add("display", "none");
+                trOriginalAnswer.Style.Add("display", "");
+                ddlQuestionKind.Items.Remove("Multimedia");
+            }
+
+            if (strDataKind == "Multimedia")
+            {
+                btnAni.Visible = true;
+            }
+
+            if (!IsPostBack)
+            {
+                if (strMode == "ModifyOriQ")
+                {
+                    tbEditQuestion.Text = clsInterrogationEnquiry.GetDefaultQuestion(strQID);
+                    tbEditAnswer.Text = clsInterrogationEnquiry.GetDefaultAnswer(strQID);
+                }
+                else
+                {
+                    tbEditQuestion.Text = dtContent.Rows[0]["cAnswer"].ToString();
+                    string strAnswerContentType = "";
+                    if (dtContent.Rows[0]["cAnswerContentType"].ToString() == "簡短的")
+                    {
+                        strAnswerContentType = "1";
+                    }
+                    else if (dtContent.Rows[0]["cAnswerContentType"].ToString() == "複雜的")
+                    {
+                        strAnswerContentType = "2";
+                    }
+                    else if (dtContent.Rows[0]["cAnswerContentType"].ToString() == "模糊不清的")
+                    {
+                        strAnswerContentType = "3";
+                    }
+                    ddlAnswerContentType.SelectedValue = strAnswerContentType;
+                }
+            }
+            tbEditDescription.Text = "";
+
+        }
+        else if (strMode == "AddNewQuestion")
+        {
+            strTitle = "Add a new question";
+            strKind = "Question " + strKind;
+            strContent = "Question " + strContent;
+            strDescription = "Question " + strDescription;
+            strKeyword = "Question " + strKeyword;
+            strAnswer = "Question " + strAnswer;
+        }
+
+    }
+
+    protected void btnSubmit_Click(object sender, EventArgs e)
+    {
+        string strKeyword = "";
+
+        for (int i = 0; i < tdKeyword.Controls.Count; i++)
+        {
+            if (tdKeyword.Controls[i].GetType().Name == "TextBox")
+            {
+                TextBox tbTemp = new TextBox();
+                tbTemp = (TextBox)(tdKeyword.Controls[i]);
+                if (tbTemp.Text != null)
+                {
+                    strKeyword = strKeyword + tbTemp.Text + ";";
+                }
+            }
+        }
+
+        if (strDataKind == "")
+        {
+            if (ddlQuestionKind.Text == "Chinese")
+            {
+                strDataKind = "Chinese";
+
+            }
+            else if (ddlQuestionKind.Text == "English")
+            {
+                strDataKind = "English";
+            }
+            else if (ddlQuestionKind.Text == "Multimedia")
+            {
+                strDataKind = "Multimedia";
+            }
+        }
+
+        if (strMode == "ModifySynQ" || strMode == "ModifyAnswer" || strMode == "ModifyOriQ")
+        {
+            string strAnswerContentType = "";
+            if (ddlAnswerContentType.SelectedValue == "1")
+            {
+                strAnswerContentType = "簡短的";
+            }
+            else if (ddlAnswerContentType.SelectedValue == "2")
+            {
+                strAnswerContentType = "複雜的";
+            }
+            else if (ddlAnswerContentType.SelectedValue == "3")
+            {
+                strAnswerContentType = "模糊不清的";
+            }
+
+            clsConversation.Conversation_Answer_UPDATE_Answer(strQID, strAID, tbEditQuestion.Text, strAnswerContentType);
+        }
+        else
+        {
+            //AddSynonymousItem(strQID, tbEditQuestion.Text, strDataKind, tbEditDescription.Text, strKeyword, tbEditAnswer.Text, strAID);
+        }
+
+        //增加答案
+        if (strMode == "AddAnswer")
+        {
+            int iMaxSerialNum = clsConversation.Conversation_Answer_Select_MaxiSerialNum();
+            int iAnswerContentType = 0;
+            string strAnswerContentType = "";
+            string strAnswerType = "";
+            if (ddlAnswerContentType.SelectedValue == "1")
+            {
+                iAnswerContentType = 1;
+                strAnswerContentType = "簡短的";
+            }
+            else if (ddlAnswerContentType.SelectedValue == "2")
+            {
+                iAnswerContentType = 2;
+                strAnswerContentType = "複雜的";
+            }
+            else if (ddlAnswerContentType.SelectedValue == "3")
+            {
+                iAnswerContentType = 3;
+                strAnswerContentType = "模糊不清的";
+            }
+            strAID = strQID + "_" + iMaxSerialNum + "_" + iAnswerType + "_" + iAnswerContentType;
+
+            DataTable dtConversation_AnswerType = clsConversation.Conversation_AnswerType_SELECT_AssignedAnswerType(iGroupSerialNum, iAnswerType);
+            strAnswerType = dtConversation_AnswerType.Rows[0]["cAnswerTypeName"].ToString();
+
+            clsConversation.Conversation_Answer_INSERT(iMaxSerialNum, strQID, strAID, tbEditQuestion.Text, strAnswerType, strAnswerContentType);
+        }
+
+        if (strEditPositation == "QuestionDatabase")
+        {
+            string strCareer = Request.QueryString["Career"]; //設定好答案，職業類別也要傳回去   老詹 2014/09/24
+            if (iAnswerType != 0)
+            {
+                Response.Redirect("Paper_ConversationQuestionEditor.aspx?GroupID=" + strGroupID + "&QID=" + strQID + "&AnswerType=" + iAnswerType + "&Career=" + strCareer + "");
+            }
+            else
+            {
+                Response.Redirect("Paper_ConversationQuestionEditor.aspx?GroupID=" + strGroupID + "&QID=" + strQID + "&Career=" + strCareer + "");
+            }
+        }
+        else
+        {
+            Response.Redirect("/hints/AuthoringTool/CaseEditor/Interrogation/Enquiry.aspx?Step=2");
+        }
+    }
+
+    protected void AddSynonymousItem(string strQID, string Question, string strDataKind, string strDescription, string strKeyword, string Answer, string strAID)
+    {
+        int strRecentNumber = 0;
+
+        if (strDataKind == "Multimedia")
+        {
+            //clsInterrogationEnquiry.DeleteSynonymousItem(strMode, strQID, strDataKind);
+
+            strRecentNumber = clsInterrogationEnquiry.GetOriginalItemNum(strMode, strQID);
+            if (strRecentNumber != 0)
+            {
+                strDataKind = strDataKind + "-Synonymous" + Convert.ToInt32(strRecentNumber);
+            }
+        }
+        else
+        {
+            strRecentNumber = clsInterrogationEnquiry.GetOriginalItemNum(strMode, strQID);
+            if (strRecentNumber != 0)
+            {
+                strDataKind = strDataKind + "-Synonymous" + Convert.ToInt32(strRecentNumber);
+            }
+            else
+            {
+                strDataKind = strDataKind + "-Synonymous1";
+            }
+        }
+
+        if (strAID != "")
+        {
+            clsInterrogationEnquiry.AddSynonymousItem(strMode, strQID, Question, strDataKind, strDescription, strKeyword, Answer, strAID);
+        }
+        else
+        {
+            clsInterrogationEnquiry.AddSynonymousItem(strMode, strQID, Question, strDataKind, strDescription, strKeyword, Answer);
+        }
+
+    }
+
+    protected void btnAni_Click(object sender, EventArgs e)
+    {
+        //Response.Redirect("/Hints/AuthoringTool/CaseEditor/ItemAnimation/EditIA_Select.aspx?Item=" + strQID + "&Mode=" + strMode + "&SrcPage=Interrogation/EditAddAskQuestionAnswer.aspx,'_Animation','width=800','height=600','left=100','top=100','resizable=yes'");
+        //Response.Redirect("/hints/AuthoringTool/MultiMediaDB/Upload/CaseFolder.aspx?Type=Image");
+        string strScript;
+        strScript = "Open();";
+
+        ScriptManager.RegisterStartupScript(this, ((Control)sender).GetType(), "Open", strScript, true);
+    }
+    protected void btnCancel_Click(object sender, EventArgs e)
+    {
+        string strCareer = Request.QueryString["Career"];//返回後仍要判斷職業  老詹 2014/08/26
+        if (strEditPositation == "QuestionDatabase")
+        {
+            if (iAnswerType != 0)
+            {
+                Response.Redirect("Paper_ConversationQuestionEditor.aspx?GroupID=" + strGroupID + "&QID=" + strQID + "&AnswerType=" + iAnswerType + "&Career=" + strCareer + "");
+            }
+            else
+            {
+                Response.Redirect("Paper_ConversationQuestionEditor.aspx?GroupID=" + strGroupID + "&QID=" + strQID + "&Career=" + strCareer + "");
+            }
+        }
+        else
+        {
+            Response.Redirect("/hints/AuthoringTool/CaseEditor/Interrogation/Enquiry.aspx?Step=2");
+        }
+    }
+}

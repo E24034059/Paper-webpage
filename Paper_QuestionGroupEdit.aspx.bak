@@ -1,0 +1,170 @@
+﻿<%@ Reference Page="~/AuthoringTool/BasicForm/BasicForm.aspx" %>
+
+<%@ Page Language="C#" AutoEventWireup="true" CodeFile="Paper_QuestionGroupEdit.aspx.cs"
+    Inherits="AuthoringTool_CaseEditor_Paper_Paper_QuestionGroupEdit" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>Question Group Edit</title>
+
+    <script type="text/javascript">	
+    function goBack()
+    {
+	    var varGroupID = document.getElementById("hfGroupID").value;
+	    var varQID = document.getElementById("hfQID").value;
+		window.location.href = "Paper_QuestionGroupView.aspx?Opener=Paper_QuestionViewNew&GroupID=" + varGroupID + "&QID=" + varQID + "";
+	}
+	//每個選擇的縮放
+	function ShowSelectionQuestionDetail(strQID, strImgID, strAnswerCount)
+    { 
+       //取得縮放圖示為展開或縮起
+       var ImgLogo = document.getElementById(strImgID).src;
+       var varImgLogoPosition = ImgLogo.indexOf("Image/");
+       var varImgLogoState = ImgLogo.substr(varImgLogoPosition,16);
+       
+       if(varImgLogoState == "Image/plus.gif")
+       {
+         document.getElementById(strImgID).src = "../../../BasicForm/Image/minus.gif";
+                      
+         for(var iACount = 1; iACount <= parseInt(strAnswerCount); iACount++ )
+         {
+           document.getElementById("trAnswerTitle_" + strQID + "_" + iACount).style.display = "";
+         }
+         
+       }
+       else
+       {      
+         document.getElementById(strImgID).src = "../../../BasicForm/Image/plus.gif";
+         
+         for(var iACount = 1; iACount <= parseInt(strAnswerCount); iACount++ )
+         {
+           document.getElementById("trAnswerTitle_" + strQID + "_" + iACount).style.display = "none";
+         }
+       }
+   }
+   //每個圖形題的縮放
+   function ShowSimuQuestionDetail(strQID, strImgID, strAnswerCount) {
+       //var trModify = document.getElementById("trModify_" + strQID).style.display;
+       var trModify = document.getElementById("trimg_" + strQID).style.display;
+       if (trModify == "none") {
+//           document.getElementById("trModify_" + strQID).style.display = "";
+           document.getElementById("trimg_" + strQID).style.display = "";
+           document.getElementById(strImgID).src = "../../../BasicForm/Image/minus.gif";
+
+           for (var iACount = 1; iACount <= parseInt(strAnswerCount); iACount++) {
+               document.getElementById("trAns_" + strQID + "_" + iACount).style.display = "";
+               document.getElementById("trAnsOrder_" + strQID + "_" + iACount).style.display = "";
+           }
+
+       }
+       else {
+//           document.getElementById("trModify_" + strQID).style.display = "none";
+           document.getElementById("trimg_" + strQID).style.display = "none";
+           document.getElementById(strImgID).src = "../../../BasicForm/Image/plus.gif";
+
+           for (var iACount = 1; iACount <= parseInt(strAnswerCount); iACount++) {
+               document.getElementById("trAns_" + strQID + "_" + iACount).style.display = "none";
+               document.getElementById("trAnsOrder_" + strQID + "_" + iACount).style.display = "none";
+           }
+       }
+   }
+	//每個問題的縮放
+	function ShowDetail(strQID, strImgID, strAnswerCount)
+    {
+      //取得縮放圖示為展開或縮起
+       var ImgLogo = document.getElementById(strImgID).src;
+       var varImgLogoPosition = ImgLogo.indexOf("Image/");
+       var varImgLogoState = ImgLogo.substr(varImgLogoPosition,16);
+      
+       if(varImgLogoState == "Image/plus.gif")
+       {         
+         document.getElementById("trKeywordTitle_" + strQID).style.display = "";
+         document.getElementById(strImgID).src = "../../../BasicForm/Image/minus.gif";
+         var varHaveSynQuestion = AuthoringTool_CaseEditor_Paper_Paper_QuestionGroupEdit.CheckSynQuestion(strQID).value;
+         if(varHaveSynQuestion)
+         {
+           document.getElementById("trSynQuestionTitle_" + strQID).style.display = "";
+         }
+                      
+         for(var iACount = 1; iACount <= parseInt(strAnswerCount); iACount++ )
+         {
+           document.getElementById("trAnswerTitle_" + strQID + "_" + iACount).style.display = "";
+           var varHaveSynAnswer = AuthoringTool_CaseEditor_Paper_Paper_QuestionGroupEdit.CheckSynAnswer(strQID, iACount).value;
+           if(varHaveSynAnswer)
+           {
+            document.getElementById("trSynAnswerTitle_" + strQID + "_" + iACount).style.display = "";
+           }
+         }
+         
+       }
+       else
+       {
+         document.getElementById("trSynQuestionTitle_" + strQID).style.display = "none";
+         
+         document.getElementById("trKeywordTitle_" + strQID).style.display = "none";
+         document.getElementById(strImgID).src = "../../../BasicForm/Image/plus.gif";
+         
+         for(var iACount = 1; iACount <= parseInt(strAnswerCount); iACount++ )
+         {
+           document.getElementById("trAnswerTitle_" + strQID + "_" + iACount).style.display = "none";
+           document.getElementById("trSynAnswerTitle_" + strQID + "_" + iACount).style.display = "none";
+         }
+       }
+    }
+    function SaveQuestionGroup(strQID, strAssignedQID, strSelectionID)
+    {
+        var varCheckBoxState = document.getElementById("cbQuestionGroup" + strQID).checked
+        
+        AuthoringTool_CaseEditor_Paper_Paper_QuestionGroupEdit.SaveSelectionRelatedQuestion(strQID, strAssignedQID, strSelectionID, varCheckBoxState);
+    }
+    </script>
+
+</head>
+<body>
+    <form id="form1" runat="server">
+    <div>
+        <table id="body_content" style="width: 99%;" align="center" runat="server">
+            <tr id="trFunctionList">
+                <td id="tcFunctionList" align="center" class="title">
+                    <span id="spanFunctionList">Question Group Edit </span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <hr />
+                    請設定此選項的相關問題：
+                    <asp:Label ID="lbSelectionItem" runat="server" Font-Bold="True" ForeColor="Red"></asp:Label>
+                    <hr />
+                </td>
+            </tr>
+            <tr id="trQuestionTable" runat="server">
+                <td id="tcQuestionTable" runat="server">
+                </td>
+            </tr>
+            <tr id="trTextQuestionTable" runat="server">
+                <td id="tcTextQuestionTable" runat="server">
+                </td>
+            </tr>
+            <tr id="trSimQuestionTable" runat="server">
+                    <td id="tcSimQuestionTable" runat="server">
+                    </td>
+                </tr>
+            <tr style="width: 100%">
+                <td align="right">
+                    <hr />
+                    <input id="btnBack" style="width: 150px; cursor: hand; height: 30px" onclick="goBack()"
+                        type="button" value="<< Back" name="btnBack" class="button_continue">
+                    &nbsp;&nbsp;    
+                     <input id="btnSave" style="width: 150px; cursor: hand; height: 30px" onclick="goBack()"
+                        type="button" value="Submit" name="btnBack" class="button_continue">    
+                </td>
+            </tr>
+        </table>
+    </div>
+    <asp:HiddenField ID="hfGroupID" runat="server" />
+    <asp:HiddenField ID="hfQID" runat="server" />
+    <asp:HiddenField ID="hfAnswerCount" runat="server" />
+    </form>
+</body>
+</html>

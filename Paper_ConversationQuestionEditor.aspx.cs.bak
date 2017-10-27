@@ -1,0 +1,576 @@
+﻿using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Web;
+using System.Web.SessionState;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.UI.HtmlControls;
+using Hints.DB;
+using Hints.DB.Section;
+using Hints.DB.Conversation;
+
+namespace PaperSystem
+{
+    /// <summary>
+    /// 用來編輯對話題的工具
+    /// </summary>
+    public partial class Paper_ConversationQuestionEditor : AuthoringTool_BasicForm_BasicForm
+    {
+        protected string btnFinish = "";
+        protected string strClientScript = "";
+
+        bool bModify = false;
+
+        string strUserID, strCaseID, strDivisionID, strClinicNum, strSectionName, strPaperID, strQID, strAID;
+        string strGroupID = "";
+        string strGroupDivisionID = "";
+        int iAnswerType = 0;
+        string strAnswerTypeName = "";
+
+        bool bNewQuestion = false;
+
+        SQLString mySQL = new SQLString();
+
+        protected void Page_Load(object sender, System.EventArgs e)
+        {
+            this.Initiate();
+
+            //接收參數
+            this.getParametor();
+
+            //加入btnSaveNextQuestion的事件
+            btnSaveNextQuestion.ServerClick += new EventHandler(btnSaveNextQuestion_ServerClick);
+
+            //加入btnSaveNext的事件
+            btnSaveNext.ServerClick += new EventHandler(btnSaveNext_ServerClick);
+
+            string strGetKeyword = Hints.Learning.Question.DataReceiver.getTextQuestionKeyword(strQID);
+            if (strGetKeyword != "N/A")
+            {
+                lbKeyword.Text = strGetKeyword;
+                btnEditKeyword.CssClass = "button_press_enable";
+                //btnEditKeyword.Text = "Edit the Keyword";
+            }
+
+            #region 設定病徵的下拉選單項目
+            //建立病徵的下拉選單項目
+            DataTable dtDiseaseSymptomsTree = DiseaseSymptomsTree_SELECT();
+            ddlSymptoms.Items.Add("All");
+            foreach (DataRow drDiseaseSymptomsTree in dtDiseaseSymptomsTree.Rows)
+            {
+                ddlSymptoms.Items.Add(drDiseaseSymptomsTree["cNodeName"].ToString());
+            }
+            #endregion
+
+            #region 設定病徵的下拉選單選擇項目 與答案型態
+            if (!IsPostBack)
+            {
+                string strQuestionSymptoms = AuthoringTool.QuestionEditLevel.QuestionLevel.QuestionLevel_SELECT_QuestionSymptoms(strQID);
+                if (strQuestionSymptoms != "-1")
+                    ddlSymptoms.SelectedValue = strQuestionSymptoms;
+
+                //新建的問題 則答案型態設成第一個
+                if (bNewQuestion)
+                {
+                    DataTable dtConversation_AnswerType = clsConversation.Conversation_AnswerType_SELECT_AllAnswerType(Convert.ToInt32(hfGroupSerialNum.Value));
+                    if (dtConversation_AnswerType.Rows.Count > 0)
+                    {
+                        lbAnswerType.Text = dtConversation_AnswerType.Rows[0]["cAnswerTypeName"].ToString();
+                    }
+                    else
+                    {
+                        lbAnswerType.Text = "NULL";
+                    }
+                }
+                else
+                {
+                    DataTable dtConversation_AnswerType = clsConversation.Conversation_AnswerType_SELECT_AssignedAnswerType(Convert.ToInt32(hfGroupSerialNum.Value), iAnswerType);
+                    if (dtConversation_AnswerType.Rows.Count > 0)
+                    {
+                        lbAnswerType.Text = dtConversation_AnswerType.Rows[0]["cAnswerTypeName"].ToString();
+                    }
+                }
+
+            }
+            #endregion
+
+
+            hrQuestion.Style.Add("display", "none");
+            hrAnswer.Style.Add("display", "none");
+            //BulidInterrogation("Question");
+            BulidAnswerTypeContent("Answer");
+        }
+
+        /// <summary>
+        /// 接收參數
+        /// </summary>
+        private void getParametor()
+        {
+            //UserID
+            if (Session["UserID"] != null)
+            {
+                strUserID = Session["UserID"].ToString();
+            }
+
+            //CaseID
+            if (Session["CaseID"] != null)
+            {
+                strCaseID = Session["CaseID"].ToString();
+            }
+
+            //Division
+            if (Session["DivisionID"] != null)
+            {
+                strDivisionID = Session["DivisionID"].ToString();
+            }
+
+            //ClinicNum
+            if (Session["ClinicNum"] != null)
+            {
+                strClinicNum = Session["ClinicNum"].ToString();
+            }
+
+            //SectionName
+            if (Session["SectionName"] != null)
+            {
+                strSectionName = Session["SectionName"].ToString();
+            }
+
+            hfPaperID.Value = "";
+            //PaperID
+            if (Session["PaperID"] != null)
+            {
+                strPaperID = Session["PaperID"].ToString();
+                hfPaperID.Value = strPaperID;
+            }
+            else
+            {
+                SQLString mySQL = new SQLString();
+                strPaperID = mySQL.getPaperIDFromCase(strCaseID, strClinicNum.ToString(), strSectionName);
+                hfPaperID.Value = strPaperID;
+            }
+
+            //Opener
+            if (Request.QueryString["Opener"] != null)
+            {
+                hiddenOpener.Value = Request.QueryString["Opener"].ToString();
+            }
+
+            //QuestionMode
+            if (Session["QuestionMode"] != null)
+            {
+                hiddenQuestionMode.Value = Session["QuestionMode"].ToString();
+            }
+
+            //PresentType
+            if (Session["PresentType"] != null)
+            {
+                hiddenPresentType.Value = Session["PresentType"].ToString();
+            }
+
+            //Edit method
+            if (Session["EditMode"] != null)
+            {
+                hiddenEditMode.Value = Session["EditMode"].ToString();
+            }
+
+            //bModify
+            if (Session["bModify"] != null)
+            {
+                bModify = Convert.ToBoolean(Session["bModify"]);
+            }
+
+            //GroupID
+            if (Request.QueryString["GroupID"] != null)
+            {
+                strGroupID = Request.QueryString["GroupID"].ToString();
+                hfGroupID.Value = strGroupID;
+                hfGroupSerialNum.Value = DataReceiver.getQuestionGroupSerialNumByQuestionGroupID(strGroupID).ToString();
+
+                if (Session["GroupID"] != null)
+                {
+                    Session["GroupID"] = strGroupID;
+                }
+                else
+                {
+                    Session.Add("GroupID", strGroupID);
+                }
+            }
+
+            //QID
+            if (Request.QueryString["QID"] != null)
+            {
+                strQID = Request.QueryString["QID"].ToString();
+
+                //把QID的題目內容寫入txtData中
+                string strQuestion = clsConversation.Conversation_Question_SELECT_Question(strQID);
+                if (this.IsPostBack == false)
+                {
+                    txtQuestionEdit.Text = strQuestion;
+                }
+                bNewQuestion = false;
+            }
+            else
+            {
+                //問題流水號
+                int iQuestionSerialNum = Conversation_Question_Select_MaxiSerialNum();
+                //問題所在群組分類的流水號
+                int iQuestionGroupSerialNum = Convert.ToInt32(DataReceiver.getQuestionGroupSerialNumByQuestionGroupID(strGroupID).ToString());
+                //建立QID
+                strQID = iQuestionSerialNum + "_" + iQuestionGroupSerialNum;
+                bNewQuestion = true;
+            }
+
+            //AnswerType
+            if (Request.QueryString["AnswerType"] != null)
+            {
+                iAnswerType = Convert.ToInt32(Request.QueryString["AnswerType"].ToString());
+            }
+
+            //GroupDivisionID
+            if (strGroupID != null)
+            {
+                if (strGroupID.Trim().Length > 0)
+                {
+                    DataReceiver myReceiver = new DataReceiver();
+                    strGroupDivisionID = myReceiver.getGroupDivisionID(strGroupID);
+
+                    if (Session["GroupDivisionID"] != null)
+                    {
+                        Session["GroupDivisionID"] = strGroupDivisionID;
+                    }
+                    else
+                    {
+                        Session.Add("GroupDivisionID", strGroupDivisionID);
+                    }
+                }
+            }
+        }
+
+
+        #region Web Form 設計工具產生的程式碼
+        override protected void OnInit(EventArgs e)
+        {
+            //
+            // CODEGEN: 此為 ASP.NET Web Form 設計工具所需的呼叫。
+            //
+            InitializeComponent();
+            base.OnInit(e);
+        }
+
+        /// <summary>
+        /// 此為設計工具支援所必須的方法 - 請勿使用程式碼編輯器修改
+        /// 這個方法的內容。
+        /// </summary>
+        private void InitializeComponent()
+        {
+
+        }
+        #endregion
+
+        private DataTable GetKeyword(string strQID)
+        {
+            clsHintsDB sqldb = new clsHintsDB();
+            string strSQL = "Select * From Paper_TextQuestionKeyword Where cQID = '" + strQID + "' ";
+            DataTable dtTemp = sqldb.getDataSet(strSQL).Tables[0];
+            return dtTemp;
+        }
+
+        private void btnSaveNextQuestion_ServerClick(object sender, EventArgs e)
+        {
+            DataReceiver myReceiver = new DataReceiver();
+
+            //儲存題目
+            clsTextQuestion myText = new clsTextQuestion();
+            string strTextQContent = txtQuestionEdit.Text;
+            strTextQContent = strTextQContent.Replace("&lt;", "<");
+            strTextQContent = strTextQContent.Replace("&gt;", ">");
+
+            //myText.saveQuestionAnswer(strQID, strAID, strTextQContent, strTextAContent, strUserID, strPaperID, strGroupDivisionID, strGroupID, hiddenQuestionMode.Value);
+
+            //儲存問題的病徵
+            AuthoringTool.QuestionEditLevel.QuestionLevel.QuestionLevel_INSERT_QuestionSymptoms(strQID, ddlSymptoms.SelectedValue);
+
+            //如果是Specific題目則需儲存一筆資料至Paper_Content
+            if (hiddenQuestionMode.Value == "Specific")
+            {
+                int intContentSeq = myReceiver.getPaperContentMaxSeq(strPaperID) + 1;
+                SQLString mySQL = new SQLString();
+                mySQL.SaveToQuestionContent(strPaperID, strQID, "0", "2", hiddenQuestionMode.Value, intContentSeq.ToString());
+            }
+
+
+            //建立QID
+            strQID = strUserID + "_" + myReceiver.getNowTime();
+
+            //清除TextArea
+            txtQuestionEdit.Text = "";
+            string strScript = "<script language='javascript'>\n";
+            strScript += "Clear()\n";
+            strScript += "</script>\n";
+            Page.RegisterStartupScript("Clear", strScript);
+
+            hrQuestion.Style.Add("display", "none");
+            hrAnswer.Style.Add("display", "none");
+            //BulidInterrogation("Question");
+            BulidAnswerTypeContent("Answer");
+        }
+
+        /// <summary>
+        /// Save text question
+        /// </summary>
+        private void SaveQuestionText()
+        {
+            //儲存題目
+            clsTextQuestion myText = new clsTextQuestion();
+            string strQTextContent = txtQuestionEdit.Text;
+            strQTextContent = strQTextContent.Replace("&lt;", "<");
+            strQTextContent = strQTextContent.Replace("&gt;", ">");
+
+            clsConversation.saveConversation_Question(strQID, strQTextContent, strPaperID, strGroupDivisionID, strGroupID, hiddenQuestionMode.Value);
+
+            //儲存問題的病徵
+            AuthoringTool.QuestionEditLevel.QuestionLevel.QuestionLevel_INSERT_QuestionSymptoms(strQID, ddlSymptoms.SelectedValue);
+
+            //如果是Specific題目則需儲存一筆資料至Paper_Content
+            if (hiddenQuestionMode.Value == "Specific")
+            {
+                DataReceiver myReceiver = new DataReceiver();
+                int intContentSeq = myReceiver.getPaperContentMaxSeq(strPaperID) + 1;
+                SQLString mySQL = new SQLString();
+                mySQL.SaveToQuestionContent(strPaperID, strQID, "0", "2", hiddenQuestionMode.Value, intContentSeq.ToString());
+            }
+
+        }
+
+        private void btnSaveNext_ServerClick(object sender, EventArgs e)
+        {
+            SaveQuestionText();
+
+            //Redirect至下一個網頁
+            string strSystemFunction = "";
+            if (Session["SystemFunction"] != null)
+            {
+                strSystemFunction = Session["SystemFunction"].ToString();
+            }
+
+            switch (strSystemFunction)
+            {
+                case "EditPaper":
+                    Response.Redirect("Paper_OtherQuestion.aspx?Opener=Paper_TextQuestionEditor");
+                    break;
+                case "EditQuestion":
+                    if (Request.QueryString["QID"] != null)
+                    {
+                        Response.Redirect("Paper_QuestionViewNew.aspx?Opener=Paper_TextQuestionEditor");
+                    }
+                    else
+                    {
+                        strGroupID = Session["GroupID"].ToString();
+                        Response.Redirect("Paper_QuestionViewNew.aspx?GroupID=" + strGroupID);
+                    }
+                    break;
+                case "PreviewPaper":
+                    Response.Redirect("Paper_MainPage.aspx?Opener=Paper_TextQuestionEditor");
+                    break;
+                default:
+                    Response.Redirect("Paper_QuestionMain.aspx?Opener=Paper_TextQuestionEditor");
+                    break;
+            }
+        }
+
+        protected void btnEditKeyword_Click(object sender, EventArgs e)
+        {
+            SaveQuestionText();
+            Response.Redirect("~/AuthoringTool/CaseEditor/Paper/Paper_EditQuestionKeyword.aspx?QID=" + strQID + "&GroupID=" + strGroupID + "&CaseID=" + usi.CaseID + "&ClinicNum=" + usi.ClinicNum + "&Section=" + usi.Section + "&AID=" + strAID + " ");
+        }
+
+        protected void btAddSynQuestion_Click(object sender, EventArgs e)
+        {
+            SaveQuestionText();
+            Response.Redirect("../Interrogation/EditAddAskQuestionAnswer.aspx?Mode=AddQuestion&RecentItemID=" + strQID + "&EditPositation=QuestionDatabase&GroupID=" + strGroupID + "&AID=" + strAID + "");
+        }
+
+        protected void btAddAnswer_Click(object sender, EventArgs e)
+        {
+            SaveQuestionText();
+            Response.Redirect("EditConversationAnswer.aspx?Mode=AddAnswer&QID=" + strQID + "&EditPositation=QuestionDatabase&GroupID=" + strGroupID + "&AnswerType=" + iAnswerType + "");
+        }
+
+        //建立答案型態的答案
+        private void BulidAnswerTypeContent(string strType)
+        {
+            strAnswerTypeName = clsConversation.Conversation_AnswerType_SELECT_AssignedAnswerTypeName(Convert.ToInt32(hfGroupSerialNum.Value), iAnswerType);
+            DataTable dtConversation = new DataTable();
+            if (strType == "Answer")
+            {
+                tbInterrogationClassAnswer.Controls.Clear();
+                tbInterrogationClassAnswer.Style.Add("background-color", "#F8F0E7");
+                dtConversation = clsConversation.Conversation_Answer_SELECT_Answer(strQID, strAnswerTypeName);
+            }
+
+            if (dtConversation.Rows.Count > 0)
+            {
+                #region 答案的標題
+                TableRow trAnswerTypeContentT = new TableRow();
+                trAnswerTypeContentT.Attributes.Add("style", "border:0px black solid;background:#7BC2FA; font-weight:bold;color:black");
+                trAnswerTypeContentT.Style.Add("CURSOR", "hand");
+                trAnswerTypeContentT.Style.Add("TEXT-ALIGN", "left");
+
+                TableCell tcAnswerTypeContentT = new TableCell();
+                trAnswerTypeContentT.Cells.Add(tcAnswerTypeContentT);
+
+                tcAnswerTypeContentT.Text = "<IMG id='img" + strType + "_" + strQID + "' src='../../../BasicForm/Image/minus.gif'>&nbsp;Answer " + strType;
+
+                TableRow trAnswerTypeContentTable = new TableRow();
+                trAnswerTypeContentTable.ID = "tr" + strType + "" + strQID;
+                trAnswerTypeContentT.Attributes.Add("onclick", "ShowDetail('" + trAnswerTypeContentTable.ID + "' , 'img" + strType + "_" + strQID + "')");
+
+                if (strType == "Answer")
+                {
+                    tbInterrogationClassAnswer.Rows.Add(trAnswerTypeContentT);
+                    tbInterrogationClassAnswer.Rows.Add(trAnswerTypeContentTable);
+                    hrAnswer.Style.Add("display", "");
+                }
+
+
+                TableCell tcAnswerTypeContentTable = new TableCell();
+                trAnswerTypeContentTable.Cells.Add(tcAnswerTypeContentTable);
+
+                Table tbAnswerTypeContentTable = new Table();
+                tcAnswerTypeContentTable.Controls.Add(tbAnswerTypeContentTable);
+                tbAnswerTypeContentTable.Width = Unit.Percentage(100);
+                tbAnswerTypeContentTable.GridLines = GridLines.Both;
+
+                #endregion
+
+                #region 同義問題或答案內容
+                for (int iAnswerTypeContent = 0; iAnswerTypeContent < dtConversation.Rows.Count; iAnswerTypeContent++)
+                {
+                    #region 同義項目的序號
+                    TableRow trAnswerTypeContentItemT = new TableRow();
+                    trAnswerTypeContentItemT.CssClass = "header1_tr_even_row";
+                    tbAnswerTypeContentTable.Rows.Add(trAnswerTypeContentItemT);
+
+                    TableCell tcAnswerTypeContentItemT = new TableCell();
+                    trAnswerTypeContentItemT.Cells.Add(tcAnswerTypeContentItemT);
+                    tcAnswerTypeContentItemT.Text = "Answer." + (iAnswerTypeContent + 1) + " :";
+                    tcAnswerTypeContentItemT.Width = Unit.Percentage(8);
+
+                    string strAnswerTypeContentType = dtConversation.Rows[iAnswerTypeContent]["cAnswerContentType"].ToString();
+                    string strAnswerTypeContentValue = dtConversation.Rows[iAnswerTypeContent]["cAnswer"].ToString();
+                    TableCell tcAnswerTypeContent = new TableCell();
+                    trAnswerTypeContentItemT.Cells.Add(tcAnswerTypeContent);
+                    #endregion
+
+                    #region 答案項目的內容
+                    tcAnswerTypeContent.Text = "( " + strAnswerTypeContentType + " ) " + strAnswerTypeContentValue;
+                    tcAnswerTypeContent.Width = Unit.Percentage(82);
+                    #endregion
+
+                    #region 答案項目的編輯
+                    TableCell tcAnswerTypeContentModify = new TableCell();
+                    trAnswerTypeContentItemT.Cells.Add(tcAnswerTypeContentModify);
+                    tcAnswerTypeContentModify.Style.Add("text-align", "center");
+                    tcAnswerTypeContentModify.Width = Unit.Percentage(5);
+
+                    Button btModifyAnswerTypeContent = new Button();
+                    btModifyAnswerTypeContent.Click += new EventHandler(btModifyAnswerTypeContent_Click);
+                    btModifyAnswerTypeContent.CssClass = "button_Edit";
+                    btModifyAnswerTypeContent.CommandArgument = "btnModify$" + strQID + "$" + dtConversation.Rows[iAnswerTypeContent]["cAID"].ToString();
+                    tcAnswerTypeContentModify.Controls.Add(btModifyAnswerTypeContent);
+
+
+                    TableCell tcAnswerTypeContentDelete = new TableCell();
+                    trAnswerTypeContentItemT.Cells.Add(tcAnswerTypeContentDelete);
+                    tcAnswerTypeContentDelete.Style.Add("text-align", "center");
+                    tcAnswerTypeContentDelete.Width = Unit.Percentage(5);
+
+                    Button btnDeleteAnswerTypeContent = new Button();
+                    btnDeleteAnswerTypeContent.ID = "btnDelete|" + strQID + "|" + dtConversation.Rows[iAnswerTypeContent]["cAID"].ToString();
+                    btnDeleteAnswerTypeContent.CssClass = "button_Delete";
+                    btnDeleteAnswerTypeContent.Click += new EventHandler(btnDeleteAnswerTypeContent_Click);
+                    btnDeleteAnswerTypeContent.CommandArgument = "btnDelete$" + strQID + "$" + dtConversation.Rows[iAnswerTypeContent]["cAID"].ToString();
+                    tcAnswerTypeContentDelete.Controls.Add(btnDeleteAnswerTypeContent);
+                    #endregion
+                }
+
+                #endregion
+            }
+        }
+
+        //刪除項目
+        void btnDeleteAnswerTypeContent_Click(object sender, EventArgs e)
+        {
+            string strTempQID = "";
+            string strTempAID = "";
+            Button btnDelete = new Button();
+            btnDelete = (Button)(sender);
+
+            strTempQID = btnDelete.CommandArgument.Split('$')[1];//QID
+            strTempAID = btnDelete.CommandArgument.Split('$')[2];//AID
+
+            clsConversation.Conversation_Answer_DELETE_AssignedAnswer(strTempQID, strTempAID);
+
+            hrQuestion.Style.Add("display", "none");
+            hrAnswer.Style.Add("display", "none");
+            //BulidInterrogation("Question");
+            BulidAnswerTypeContent("Answer");
+        }
+
+        //修改項目
+        void btModifyAnswerTypeContent_Click(object sender, EventArgs e)
+        {
+            string strTempQID = "";
+            string strTempAID = "";
+            Button btnDelete = new Button();
+            btnDelete = (Button)(sender);
+
+            strTempQID = btnDelete.CommandArgument.Split('$')[1];//QID
+            strTempAID = btnDelete.CommandArgument.Split('$')[2];//AID
+
+            Response.Redirect("EditConversationAnswer.aspx?Mode=ModifyAnswer&QID=" + strTempQID + "&EditPositation=QuestionDatabase&GroupID=" + strGroupID + "&AID=" + strTempAID + "&AnswerType=" + iAnswerType + "");
+        }
+
+        //取得病徵項目
+        private DataTable DiseaseSymptomsTree_SELECT()
+        {
+            clsHintsDB HintsDB = new clsHintsDB();
+            DataTable dtDiseaseSymptomsTree = new DataTable();
+            string strSQL_DiseaseSymptomsTree = "SELECT  DISTINCT cNodeName FROM DiseaseSymptomsTree WHERE cParentID != 'Diseaseroot' ORDER BY cNodeName ASC";
+            dtDiseaseSymptomsTree = HintsDB.getDataSet(strSQL_DiseaseSymptomsTree).Tables[0];
+            return dtDiseaseSymptomsTree;
+        }
+
+        //取得Conversation_Question目前的流水號
+        private int Conversation_Question_Select_MaxiSerialNum()
+        {
+            int iMaxSerialNum = 0;
+            clsHintsDB HintsDB = new clsHintsDB();
+            string strSQL_Conversation_Question = "SELECT MAX(iSerialNum) AS iSerialNum FROM Conversation_Question";
+            DataTable dtConversation_Question = HintsDB.getDataSet(strSQL_Conversation_Question).Tables[0];
+            if (dtConversation_Question.Rows.Count > 0)
+            {
+                if (dtConversation_Question.Rows[0]["iSerialNum"].ToString() != "")
+                {
+                    iMaxSerialNum = (Convert.ToInt32(dtConversation_Question.Rows[0]["iSerialNum"].ToString()) + 1);
+                }
+                else
+                {
+                    iMaxSerialNum = 1;
+                }
+
+            }
+            else
+            {
+                iMaxSerialNum = 1;
+            }
+            return iMaxSerialNum;
+        }
+
+
+    }
+}

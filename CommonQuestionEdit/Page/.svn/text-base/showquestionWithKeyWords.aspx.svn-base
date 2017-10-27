@@ -1,0 +1,434 @@
+﻿<%@ Reference Page="~/AuthoringTool/CaseEditor/Paper/CommonQuestionEdit/Page/EntryDiagnosisAndQuestion.aspx" %>
+<%@ Reference Page="~/AuthoringTool/CaseEditor/Paper/CommonQuestionEdit/Page/remotingscripting.aspx" %>
+<%@ Reference Page="~/AuthoringTool/BasicForm/BasicForm.aspx" %>
+<%@ Page Language="C#" AutoEventWireup="true" smartNavigation="False" CodeFile="showquestionWithKeyWords.aspx.cs" Inherits="AuthoringTool.CommonQuestionEdit.showquestionWithKeyWords" %>
+
+<HTML>
+	<HEAD runat='server'>
+		<title>Common Question Edit</title>
+		<meta content="Microsoft Visual Studio .NET 7.1" name="GENERATOR">
+		<meta content="C#" name="CODE_LANGUAGE">
+		<meta content="JavaScript" name="vs_defaultClientScript">
+		<meta content="http://schemas.microsoft.com/intellisense/ie5" name="vs_targetSchema">
+		<script language="javascript" src="/Hints/BasicForm/showDialog.js"></script>
+		<script language="javascript" src="/Hints/AuthoringTool/CaseEditor/EditHtml/EditHTMLContent.js"></script>		
+	</HEAD>
+	<body onload="window_onload();" onunload="ExitPage();">
+    <script language="javascript">
+        var strLanguage = '<%=Language%>';
+        var currentEditQuestion = <%=Session["CurrentEditQuestionNum"].ToString()%>;
+        var totalQuestionNum = <%=Session["totalQuestionNum"].ToString()%>;
+        var Question_Edit_Type = '<%=Question_Edit_Type%>';
+        function setEditButton()
+        {
+            if(currentEditQuestion==0)
+            {
+                document.all('PreQusBtn').disabled = true;
+            }
+            else
+            {
+                document.all('PreQusBtn').disabled = false; 
+            }
+            document.all('NewItemButton_1').style.display='none';
+            if(document.getElementById("hiddenPreOpener").value == "SelectPaperMode")
+            {
+                document.all('PreQusBtn').style.display='none';
+                document.all('NextQusBtn').style.display='none';
+                if(document.getElementById("hiddenBModify") != null)
+                    if (document.getElementById("hiddenBModify").value == "False")
+                        document.all('btSaveNew').style.display = 'none';
+            } 	  
+        }
+        function getQID_to_modify()//在Group_Question編輯方式的編輯模式下取得所要編輯的問題
+        {
+		      
+        }		  
+        function setLayoutTable()
+        {
+            // 朱君測試
+            document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='';
+        }
+        function window_onload()
+        {		    		      
+            if(Question_Edit_Type=="Group_Question" || Question_Edit_Type=="Choice_Question")
+            {		     
+                document.all('recordCurrentEditQuestionNum').value = currentEditQuestion;
+                setEditButton();
+                setLayoutTable();
+            }
+        }
+        function nextQuestion()
+        {		      
+            document.all('recordCurrentEditQuestionNum').value = currentEditQuestion + 1;
+            currentEditQuestion++;
+            if(currentEditQuestion==totalQuestionNum)
+            {
+                event.srcElement.style.cursor = 'wait';
+                window.setTimeout('clickNewItemButton_1()',1000);
+            }
+            else
+            {	
+                document.all('LayoutTable_1').rows[currentEditQuestion+1].style.display='none';          
+                document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='';
+            }
+            setEditButton();
+        }
+        function clickNewItemButton_1()
+        {
+            document.all('NewItemButton_1').click();
+        }
+        function previousQuestion()
+        {
+            document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='none';
+            document.all('recordCurrentEditQuestionNum').value = parseInt(document.all('recordCurrentEditQuestionNum').value) - 1;
+            currentEditQuestion--;
+            document.all('LayoutTable_1').rows[currentEditQuestion+2].style.display='';
+            setEditButton();
+		      
+        }
+        function ExitPage()
+        {
+            //document.getElementById('btnExitPage').click();  
+        }
+        function EditSummary()
+        {
+            document.location.href = "EditSummary.aspx?returnPage=ShowQuestion.aspx";
+        }
+        original_FormAction = "";
+        function changeTextBoxContent()
+        {
+            var src_obj = event.srcElement;
+            var tmp_id = src_obj.id;
+            var qid = "";
+            var sid = "";
+            if(tmp_id.indexOf("QuestionTextBox")==0)
+            {
+                qid = tmp_id.split('@')[1];
+                RemotingScripting.ChangeTextBoxContentForQuestion(qid,src_obj.value);
+            }
+            else if(tmp_id.indexOf("SelectionTextBox")==0)
+            {
+                sid = tmp_id.split('@')[1];
+                RemotingScripting.ChangeTextBoxContentForSelection(sid,src_obj.value);
+            }
+            else if(tmp_id.indexOf("SelectionResponseTextBox")==0)
+            {
+                sid = tmp_id.split('@')[1];
+                RemotingScripting.ChangeTextBoxContentForSelectionRespons(sid,src_obj.value);
+            }
+            else if(tmp_id.indexOf("KeyWordsTextBox")==0)
+            {
+                sid = tmp_id.split('@')[1];
+                RemotingScripting.ChangeTextBoxContentForKeyWords(sid,src_obj.value);
+            }	
+        }	  
+        function displaySubQuestion(questonTableID)
+        {	
+            //try
+            //{ 	  
+            var sub_row_num = document.all(questonTableID).rows.length;
+            var sub_question = null;
+            for(var i=1;i<sub_row_num;i++)
+            {    
+                sub_question = document.all(questonTableID).rows[i];
+                if(sub_question.style.display=='none')
+                {
+                    sub_question.style.display='';
+                    if(i==1)
+                    {
+                        event.srcElement.src = "../image/minus.gif";
+                        document.all('recordDisplayItemID').value += questonTableID + ";";
+                    }
+                }
+                else
+                {
+                    sub_question.style.display='none';  
+                    if(i==1)
+                    {       
+                        event.srcElement.src = "../image/plus.gif";
+                        document.all('recordDisplayItemID').value = document.all('recordDisplayItemID').value.replace(questonTableID + ';','');
+                    }
+                }
+            }
+            //}
+            //catch(e){}		      
+        }
+		     
+        function delayGoBack()
+        {
+            document.all('btnPre').style.cursor = 'wait';
+            window.setTimeout('goBack()',500);
+        }
+		  
+        function goBack()
+        {
+            var strQuestionMode = "";
+            if(document.getElementById("hiddenQuestionMode") != null)
+            {
+                strQuestionMode = document.getElementById("hiddenQuestionMode").value;
+            }
+				
+            var strModifyType = "";
+            if(document.getElementById("hiddenModifyType") != null)
+            {
+                strModifyType = document.getElementById("hiddenModifyType").value;
+            }
+				
+            var strQuestionFunction = "";
+            if(document.getElementById("hiddenQuestionFunction") != null)
+            {
+                strQuestionFunction = document.getElementById("hiddenQuestionFunction").value;
+            }
+				
+            var strBModify = "";
+            if(document.getElementById("hiddenBModify") != null)
+            {
+                strBModify = document.getElementById("hiddenBModify").value;
+            }
+				
+            var strOpener = "";
+            if(document.getElementById("hiddenOpener") != null)
+            {
+                strOpener = document.getElementById("hiddenOpener").value;
+            }
+				
+            if(strModifyType == "Paper")
+            {
+                //編輯考卷
+                if(strBModify == "True")
+                {
+                    //修改題目
+                    if (document.getElementById("hiddenPreOpener").value == "SelectPaperMode")
+                        location.href = "../../Paper_MainPage.aspx?Opener=SelectPaperMode&cCaseID=" + document.getElementById("hiddenCaseID").value + "&cSectionName=" + document.getElementById("hiddenSectionName").value + "&cPaperID=" + document.getElementById("hiddenPaperID").value;
+                    else
+                        location.href = "../../Paper_MainPage.aspx";
+                }
+                else
+                {
+                    //新增問題
+                    if(strQuestionMode == "General")
+                    {
+                        //General問題編輯模式
+                        if (document.getElementById("hiddenPreOpener").value == "SelectPaperMode")
+                            location.href = "../../Paper_MainPage.aspx?Opener=SelectPaperMode&cCaseID=" + document.getElementById("hiddenCaseID").value + "&cSectionName=" + document.getElementById("hiddenSectionName").value + "&cPaperID=" + document.getElementById("hiddenPaperID").value;
+                        else
+                            location.href = "../../Paper_MainPage.aspx";
+                    }
+                    else
+                    {
+                        //Specific問題編輯模式
+                        if(strOpener == "Paper_QuestionMode")
+                        {
+                            location.href = "../../Paper_QuestionMode.aspx";
+                        }
+                        else
+                        {
+                            location.href = "../../Paper_OtherQuestion.aspx";
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var varGroupID = document.getElementById("hiddenGroupID").value;
+                //編輯題目
+                if(strBModify == "True")
+                {
+                    //修改題目
+                    //location.href = "../../Paper_QuestionView.aspx";					
+                    location.href = "../../Paper_QuestionViewNew.aspx?GroupID="+varGroupID;
+                }
+                else
+                {
+                    //新增問題
+                    //location.href = "../../QuestionGroupTree/QuestionGroupTree.aspx"; // modified by dolphin @ 2006-07-29, new Question Group Tree
+                    //location.href = "../../QuestionGroupTree/QGroupTree.aspx";
+                    location.href = "../../Paper_QuestionViewNew.aspx?GroupID="+varGroupID;
+                }
+            }
+        }
+			
+        function delaySaveQuestion()
+        {
+            document.all('btnNext').style.cursor = 'wait';
+            window.setTimeout('saveQuestion()',500);
+        }
+			
+        function saveQuestion()
+        {
+            if(document.getElementById("finishBtn") != null)
+            {
+                document.getElementById("finishBtn").click();
+            }
+        }
+			
+        function goNext()
+        {
+            var strQuestionMode = "";
+            if(document.getElementById("hiddenQuestionMode") != null)
+            {
+                strQuestionMode = document.getElementById("hiddenQuestionMode").value;
+            }
+				
+            var strModifyType = "";
+            if(document.getElementById("hiddenModifyType") != null)
+            {
+                strModifyType = document.getElementById("hiddenModifyType").value;
+            }
+				
+            var strQuestionFunction = "";
+            if(document.getElementById("hiddenQuestionFunction") != null)
+            {
+                strQuestionFunction = document.getElementById("hiddenQuestionFunction").value;
+            }
+				
+            var strBModify = "";
+            if(document.getElementById("hiddenBModify") != null)
+            {
+                strBModify = document.getElementById("hiddenBModify").value;
+            }
+				
+            if(strModifyType == "Paper")
+            {
+                //編輯考卷
+                if(strBModify == "True")
+                {
+                    //修改題目
+                    if (document.getElementById("hiddenPreOpener").value == "SelectPaperMode")
+                        location.href = "../../Paper_MainPage.aspx?Opener=SelectPaperMode&cCaseID=" + document.getElementById("hiddenCaseID").value + "&cSectionName=" + document.getElementById("hiddenSectionName").value + "&cPaperID=" + document.getElementById("hiddenPaperID").value;
+                    else
+                        location.href = "../../Paper_MainPage.aspx";
+                }
+                else
+                {
+                    //新增問題
+                    if(strQuestionMode == "General")
+                    {
+                        //General問題編輯模式
+                        if (document.getElementById("hiddenPreOpener").value == "SelectPaperMode")
+                            location.href = "../../Paper_MainPage.aspx?Opener=SelectPaperMode&cCaseID=" + document.getElementById("hiddenCaseID").value + "&cSectionName=" + document.getElementById("hiddenSectionName").value + "&cPaperID=" + document.getElementById("hiddenPaperID").value;
+                        else
+                            location.href = "../../Paper_RandomSelect.aspx";
+                    }
+                    else
+                    {
+                        //Specific問題編輯模式
+                        location.href = "../../Paper_OtherQuestion.aspx";
+                    }
+                }
+            }
+            else
+            {
+                //編輯題目
+                if(strBModify == "True")
+                {
+                    //修改題目
+                    //location.href = "../../Paper_QuestionView.aspx";
+                    location.href = "../../Paper_QuestionViewNew.aspx";
+                }
+                else
+                {
+                    //新增問題
+                    //location.href = "../../Paper_QuestionMain.aspx";
+                    location.href = "../../Paper_QuestionViewNew.aspx";
+                }
+            }
+        }
+			
+        function chkbox_CheckedChanged(srcObj)
+        {
+            RemotingScripting.chkbox_CheckedChanged(srcObj.id,srcObj.checked);
+        }
+        function lbxbox_SelectedIndexChange(srcObj)
+        {
+            RemotingScripting.lbxbox_SelectedIndexChange(srcObj.id,srcObj.selected);
+        }
+			
+        function toAnimation(citem,csubitem) {
+            //alert(citem);
+            var page = "../../../ItemAnimation/EditIA_Select.aspx?SrcPage=Paper/CommonQuestionEdit/Page/ShowQuestion.aspx?PreviousPage=entrydiagnosisandquestion&Item="+citem;
+            if(csubitem != "")
+                page += "&SubItem="+csubitem;
+			    
+            document.location.href = page;
+        }
+			
+        function toSectionMenuAuthoring() {
+            document.location.href = "/hints/flow control/terminator.aspx";
+        }
+		
+        //fadis	
+        var obj = "";
+		
+        function OpenHTMLEditor(temp)
+        {	
+            obj=document.getElementById(temp);
+            //if(String(obj.id).substring(0, 4) == "txt_")
+            //{
+            alert(obj)
+            obj.focus();
+            var intHeight = document.body.clientHeight - 200;
+            window.showModalDialog("../../../LaboratoryTest/EditArea.htm", obj,"dialogWidth:" + document.body.clientWidth);
+            //}
+			
+            event.returnValue = false;
+        }
+		
+        function EditRationale(SelectionID)
+        {
+            if(SelectionID!="")
+            {
+                window.open("EditRationale.aspx?SelectionID="+SelectionID,"","toolbar=0");
+                event.returnValue=false;
+            }
+        }
+		</script>	
+		<table id='body_content'>
+			<tr>
+				<td style="height: 65px" align="right">
+                    <form id="Form1" method="post" runat="server">
+                        <input id="recordDisplayItemID" style="width: 240px; height: 22px" type="hidden"
+                            size="34" value="此欄為用來記錄哪些Item Row是展開的" name="recordDisplayItemID" runat="server">
+                        <input id="recordCurrentEditQuestionNum" type="hidden" runat="server">
+                        
+                        <asp:Panel ID="PanelQuestion" runat="server"> 
+                        </asp:Panel>
+                        
+                        <asp:Panel ID="PanelFeature" runat="server">
+                        </asp:Panel>
+                        
+                        <nobr>
+                            <hr>
+                            <input class="button_continue" id="btnPre" onclick="delayGoBack();" type="button"
+                                value="<< Back" name="btnPre" runat="server">&nbsp;&nbsp;&nbsp;
+                            <input class="button_continue" id="PreQusBtn" onclick="previousQuestion()" type="button"
+                                value="Previous Question" name="Button1" runat="server">&nbsp;&nbsp;&nbsp;
+                            <input class="button_continue" id="NextQusBtn" onclick="nextQuestion()" type="button"
+                                value="Next Question" name="Button2" runat="server">&nbsp;&nbsp;&nbsp;
+                            <input class="button_continue" id="btnNext" onclick="delaySaveQuestion();" type="button"
+                                value="Next >>" name="btnNext" runat="server">&nbsp;&nbsp;&nbsp;
+                            <asp:Button ID="btSaveNew" runat="server" Text="Save as a new question" Visible="false" CssClass="button_continue"
+                                 OnClick="btSaveNew_Click"  style="width:200px" />&nbsp;&nbsp;&nbsp;
+                        </nobr>
+                        <br>
+                        <div style="left: 0px; position: absolute; top: 200px">
+                            <input id="hiddenOpener" type="hidden" name="hiddenOpener" runat="server">
+                            <input id="hiddenEditMode" type="hidden" name="hiddenEditMode" runat="server">
+                            <input id="hiddenQuestionMode" type="hidden" name="hiddenQuestionMode" runat="server">
+                            <input id="hiddenPresentType" type="hidden" name="hiddenPresentType" runat="server">
+                            <input id="hiddenModifyType" type="hidden" name="hiddenModifyType" runat="server">
+                            <input id="hiddenQuestionFunction" type="hidden" name="hiddenQuestionFunction" runat="server">
+                            <input id="hiddenBModify" type="hidden" name="hiddenBModify" runat="server">
+                            <input id="hiddenGroupID" type="hidden" name="hiddenGroupID" runat="server">
+                            <input id="hiddenCaseID" type="hidden" name="hiddenCaseID" value="" runat="server">
+                            <input id="hiddenSectionName" type="hidden" name="hiddenSectionName" value="" runat="server">
+                            <input id="hiddenPaperID" type="hidden" name="hiddenPaperID" value="" runat="server">
+                            <input id="hiddenPreOpener" type="hidden" name="hiddenPreOpener" value="" runat="server">
+                        </div>
+                    </form>
+					<iframe id="sub_frame" name="sub_frame" frameBorder="0" width="0%" height="0%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</body>
+</HTML>

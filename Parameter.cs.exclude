@@ -1,0 +1,17 @@
+using System;
+
+namespace PaperSystem
+{
+	/// <summary>
+	/// Parameter 的摘要描述。
+	/// </summary>
+	public class Parameter
+	{
+		public Parameter()
+		{
+			//
+			// TODO: 在此加入建構函式的程式碼
+			//
+		}
+	}
+}

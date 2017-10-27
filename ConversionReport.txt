@@ -1,0 +1,183 @@
+﻿此報告說明將 Web 應用程式，從 ASP.NET 1.1 轉換成 ASP.NET 2.0 所採取的步驟。
+轉換時發生無法解決的問題，必須手動修正。
+如需詳細資訊，請參閱 http://go.microsoft.com/fwlink/?LinkId=46995，或搜尋說明主題 <從 Visual Studio .NET 2002 或 2003 轉換>。
+於 June 21 2006, 22:29:54 開始轉換專案檔 PaperSystem.csproj。
+
+=========================錯誤===================
+錯誤: 'recordDisplayItemID' 的成員宣告已移除，而且存取範圍已從 'public' 變更為 'protected'。若要從其他頁面存取這個成員，您必須為其建立 public 存取子屬性。    commonquestionedit\page\ShowQuestion.aspx.cs
+錯誤: 下列檔案未移轉，因為在專案檔中找不到這些檔案，或相關的 'BuildAction' 被設為 'None'。
+您可能必須在完成轉換程序後，從專案中排除這些檔案，才能編譯您的網站: 
+檔案清單 == paper_mainfunction.aspx.cs,paper_headersetting.aspx,commonquestionedit\page\test.aspx.cs,
+commonquestionedit\page\groupquestion.aspx,showquestion.aspx.cs,questiongrouptree\(new)questiongrouptree.aspx,commonquestionedit\page\test.aspx,paper_operate.aspx,
+paper_operate.aspx.cs,stroehidden.aspx,showquestion.aspx,sequencemanager.aspx.cs,stroehidden.aspx.cs,paper_mainfunction.aspx,
+commonquestionedit\複製 -dataaccessor\questionparameterfiller.cs,commonquestionedit\複製 -dataaccessor\questionselectionaccessor.cs,parameter.cs,
+commonquestionedit\page\groupquestion.aspx.cs,commonquestionedit\複製 -dataaccessor\questionaccessor.cs,paper_headersetting.aspx.cs,sequencemanager.aspx。
+
+=========================警告=================
+警告: 這個 Web 專案已轉換成檔案架構的 Web 應用程式。如果您的網站包含了任何 IIS 中繼資訊 (如標記為虛擬目錄的子資料夾)，建議您關閉這個網站，然後使用 [開啟網站] 命令，再選取 [本機 IIS] 索引標籤，重新加以開啟。
+
+=========================註解=================
+Web.Config: 已加入 'xhtmlConformance' 屬性。
+從檔案 CaseTree.aspx 移除屬性 AutoEventWireup。
+從檔案 CaseTree.aspx 移除屬性 CodeFile。
+警告: 檔案 CaseTree.aspx.cs (第 26 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 EmptyPage.aspx 移除屬性 AutoEventWireup。
+從檔案 EmptyPage.aspx 移除屬性 CodeFile。
+警告: 檔案 EmptyPage.aspx.cs (第 21 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 HintsPaper_Operate.aspx 移除屬性 AutoEventWireup。
+從檔案 HintsPaper_Operate.aspx 移除屬性 CodeFile。
+警告: 檔案 HintsPaper_Operate.aspx.cs (第 44 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 HintsPaper_StatisticFrame.aspx 移除屬性 AutoEventWireup。
+從檔案 HintsPaper_StatisticFrame.aspx 移除屬性 CodeFile。
+警告: 檔案 HintsPaper_StatisticFrame.aspx.cs (第 23 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 HintsPaper_StatisticMainFunctions.aspx 移除屬性 AutoEventWireup。
+從檔案 HintsPaper_StatisticMainFunctions.aspx 移除屬性 CodeFile。
+警告: 檔案 HintsPaper_StatisticMainFunctions.aspx.cs (第 25 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 HintsPaper_StatisticPresent.aspx 移除屬性 AutoEventWireup。
+從檔案 HintsPaper_StatisticPresent.aspx 移除屬性 CodeFile。
+警告: 檔案 HintsPaper_StatisticPresent.aspx.cs (第 30 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 HintsPaper_StatisticSelection.aspx 移除屬性 AutoEventWireup。
+從檔案 HintsPaper_StatisticSelection.aspx 移除屬性 CodeFile。
+警告: 檔案 HintsPaper_StatisticSelection.aspx.cs (第 35 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_EditMethod.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_EditMethod.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_EditMethod.aspx.cs (第 22 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_InputName.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_InputName.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_InputName.aspx.cs (第 28 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_Main.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_Main.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_Main.aspx.cs (第 25 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_MainFrame.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_MainFrame.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_MainFrame.aspx.cs (第 22 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_MainPage.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_MainPage.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_MainPage.aspx.cs (第 53 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_MainPageFunctions.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_MainPageFunctions.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_MainPageFunctions.aspx.cs (第 20 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_NewOrNot.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_NewOrNot.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_NewOrNot.aspx.cs (第 24 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_OtherQuestion.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_OtherQuestion.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_OtherQuestion.aspx.cs (第 24 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_Presentation.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_Presentation.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_Presentation.aspx.cs (第 24 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_PresentMethod.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_PresentMethod.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_PresentMethod.aspx.cs (第 26 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_QuestionMain.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_QuestionMain.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_QuestionMain.aspx.cs (第 22 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_QuestionMode.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_QuestionMode.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_QuestionMode.aspx.cs (第 22 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_QuestionType.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_QuestionType.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_QuestionType.aspx.cs (第 24 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_QuestionView.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_QuestionView.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_QuestionView.aspx.cs (第 35 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_RandomSelect.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_RandomSelect.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_RandomSelect.aspx.cs (第 35 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_SelectQuestion.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_SelectQuestion.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_SelectQuestion.aspx.cs (第 34 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_Summary.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_Summary.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_Summary.aspx.cs (第 19 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 Paper_TextQuestionEditor.aspx 移除屬性 AutoEventWireup。
+從檔案 Paper_TextQuestionEditor.aspx 移除屬性 CodeFile。
+警告: 檔案 Paper_TextQuestionEditor.aspx.cs (第 54 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 PEEnterPage.aspx 移除屬性 AutoEventWireup。
+從檔案 PEEnterPage.aspx 移除屬性 CodeFile。
+警告: 檔案 PEEnterPage.aspx.cs (第 29 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 QandA_select_setRetry.aspx 移除屬性 AutoEventWireup。
+從檔案 QandA_select_setRetry.aspx 移除屬性 CodeFile。
+警告: 檔案 QandA_select_setRetry.aspx.cs (第 40 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+含有 '~/QandA_set_retry.aspx' 參考的 'Reference' 標記已加入至檔案 QandA_select_setRetry.aspx。
+含有 '~/QandA_set_review.aspx' 參考的 'Reference' 標記已加入至檔案 QandA_select_setRetry.aspx。
+警告: 檔案 QandA_select_setRetry.aspx.cs (第 251 行) 中的存取層級 'Button1_Click' 已變更為 'protected'。
+從檔案 QandA_set_retry.aspx 移除屬性 AutoEventWireup。
+從檔案 QandA_set_retry.aspx 移除屬性 CodeFile。
+警告: 檔案 QandA_set_retry.aspx.cs (第 33 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 171 行) 中的存取層級 'Radio1_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 180 行) 中的存取層級 'Radio2_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 189 行) 中的存取層級 'Radio3_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 198 行) 中的存取層級 'Radio4_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 207 行) 中的存取層級 'Radio5_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 216 行) 中的存取層級 'TextBox1_TextChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 221 行) 中的存取層級 'TextBox2_TextChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 226 行) 中的存取層級 'TextBox3_TextChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 231 行) 中的存取層級 'TextBox4_TextChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_retry.aspx.cs (第 236 行) 中的存取層級 'Button1_Click' 已變更為 'protected'。
+從檔案 QandA_set_review.aspx 移除屬性 AutoEventWireup。
+從檔案 QandA_set_review.aspx 移除屬性 CodeFile。
+警告: 檔案 QandA_set_review.aspx.cs (第 34 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 161 行) 中的存取層級 'Radio1_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 169 行) 中的存取層級 'Radio2_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 177 行) 中的存取層級 'Radio3_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 186 行) 中的存取層級 'Radio4_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 194 行) 中的存取層級 'Radio5_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 201 行) 中的存取層級 'Radio6_CheckedChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 207 行) 中的存取層級 'TextBox1_TextChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 212 行) 中的存取層級 'TextBox2_TextChanged' 已變更為 'protected'。
+警告: 檔案 QandA_set_review.aspx.cs (第 219 行) 中的存取層級 'Button1_Click' 已變更為 'protected'。
+從檔案 SectionTreeView.aspx 移除屬性 AutoEventWireup。
+從檔案 SectionTreeView.aspx 移除屬性 CodeFile。
+警告: 檔案 SectionTreeView.aspx.cs (第 27 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 test.aspx 移除屬性 AutoEventWireup。
+從檔案 test.aspx 移除屬性 CodeFile。
+警告: 檔案 test.aspx.cs (第 20 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 UploadImgFile.aspx 移除屬性 AutoEventWireup。
+從檔案 UploadImgFile.aspx 移除屬性 CodeFile。
+警告: 檔案 UploadImgFile.aspx.cs (第 27 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 UploadMediaFile.aspx 移除屬性 AutoEventWireup。
+從檔案 UploadMediaFile.aspx 移除屬性 CodeFile。
+警告: 檔案 UploadMediaFile.aspx.cs (第 27 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+警告: 檔案 UploadMediaFile.aspx.cs (第 104 行) 中的存取層級 'btnUpload_ServerClick' 已變更為 'protected'。
+從檔案 commonquestionedit\page\remotingscripting.aspx 移除屬性 AutoEventWireup。
+從檔案 commonquestionedit\page\remotingscripting.aspx 移除屬性 CodeFile。
+警告: 檔案 commonquestionedit\page\RemotingScripting.aspx.cs (第 20 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+從檔案 commonquestionedit\page\showquestion.aspx 移除屬性 AutoEventWireup。
+從檔案 commonquestionedit\page\showquestion.aspx 移除屬性 CodeFile。
+警告: 檔案 commonquestionedit\page\ShowQuestion.aspx.cs (第 42 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+含有 '~/commonquestionedit/page/remotingscripting.aspx' 參考的 'Reference' 標記已加入至檔案 commonquestionedit\page\showquestion.aspx。
+從檔案 questiongrouptree\questiongrouptree.aspx 移除屬性 AutoEventWireup。
+從檔案 questiongrouptree\questiongrouptree.aspx 移除屬性 CodeFile。
+警告: 檔案 questiongrouptree\QuestionGroupTree.aspx.cs (第 33 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+警告: 檔案 questiongrouptree\QuestionGroupTree.aspx.cs (第 250 行) 中的存取層級 'Delete_Folder_EventHandler_Button_Click' 已變更為 'protected'。
+警告: 檔案 questiongrouptree\QuestionGroupTree.aspx.cs (第 290 行) 中的存取層級 'addCaseNode_Click' 已變更為 'protected'。
+從檔案 questiongrouptree\servercomunicationpage.aspx 移除屬性 AutoEventWireup。
+從檔案 questiongrouptree\servercomunicationpage.aspx 移除屬性 CodeFile。
+警告: 檔案 questiongrouptree\ServerComunicationPage.aspx.cs (第 26 行) 中的存取層級 'Page_Load' 已變更為 'protected'。
+加入資料夾 App_Code\CommonQuestionEdit\DataAccessor。
+將檔案 commonquestionedit\dataaccessor\questionparameterfiller.cs 移到 App_Code\CommonQuestionEdit\DataAccessor\ 目錄。
+將檔案 commonquestionedit\dataaccessor\questionaccessor.cs 移到 App_Code\CommonQuestionEdit\DataAccessor\ 目錄。
+將檔案 TableAttribute.cs 移到 App_Code\ 目錄。
+已經在檔案 'commonquestionedit\tablelcontro\questionitemcontroltable.cs' 的第 '33' 行找到程式碼後置類別 'AuthoringTool.CommonQuestionEdit.EditSortedAskItem' 的參考。將在 'App_Code\Migrated' 資料夾中產生 'AuthoringTool.CommonQuestionEdit.EditSortedAskItem' 的 Stub 類別。
+加入資料夾 App_Code\CommonQuestionEdit\TablelContro。
+將檔案 commonquestionedit\tablelcontro\questionitemcontroltable.cs 移到 App_Code\CommonQuestionEdit\TablelContro\ 目錄。
+將檔案 commonquestionedit\dataaccessor\questionselectionaccessor.cs 移到 App_Code\CommonQuestionEdit\DataAccessor\ 目錄。
+加入資料夾 App_Code\QuestionGroupTree。
+將檔案 questiongrouptree\casetree.cs 移到 App_Code\QuestionGroupTree\ 目錄。
+加入資料夾 App_Code\CommonQuestionEdit\Utility。
+將檔案 commonquestionedit\utility\commonquestionutility.cs 移到 App_Code\CommonQuestionEdit\Utility\ 目錄。
+將檔案 commonquestionedit\tablelcontro\selectionitemcontroltable.cs 移到 App_Code\CommonQuestionEdit\TablelContro\ 目錄。
+將檔案 SQLString.cs 移到 App_Code\ 目錄。
+將檔案 DataReceiver.cs 移到 App_Code\ 目錄。
+將檔案 clsPresentTable.cs 移到 App_Code\ 目錄。
+將檔案 RandomSelect.cs 移到 App_Code\ 目錄。
+將檔案 clsTextQuestion.cs 移到 App_Code\ 目錄。
+已使用檔案 'commonquestionedit\page\showquestion.aspx' 中的值 'AuthoringTool.CommonQuestionEdit.Migrated_EditSortedAskItem' 更新屬性 'Inherits'。
+已經建立程式碼檔 'App_Code\Migrated\commonquestionedit\page\Stub_showquestion_aspx_cs.cs'，檔案中包含的抽象類別 'Migrated_EditSortedAskItem'，可以當做 'AuthoringTool.CommonQuestionEdit.EditSortedAskItem' 類別的基底類別使用。    commonquestionedit\page\showquestion.aspx.cs
+已將所有專案的 HTML 驗證結構描述變更為 'Internet Explorer 6.0'。
+移除檔案 Bin\PaperSystem.dll。
+移除檔案 Bin\PaperSystem.pdb。
+移除檔案 PaperSystem.csproj。
+移除檔案 PaperSystem.csproj.webinfo。
+專案 PaperSystem.csproj 已於 June 21 2006, 22:30:01 轉換成功。

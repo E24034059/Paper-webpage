@@ -1,0 +1,15 @@
+.TableName {FONT-WEIGHT: bold; FONT-SIZE: medium; COLOR: darkred; BACKGROUND-COLOR: #ffcc99}
+
+.TableTitle { BACKGROUND-COLOR: #00bbbb}
+ 
+.TitleFontColor {COLOR: White;}
+
+.TableOddRow
+{
+	background-color:#ddffff;
+}
+
+.TableEvenRow
+{
+	background-color:#faffdd;
+}

@@ -1,0 +1,872 @@
+﻿using System;
+using System.Collections;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Web;
+using System.Web.SessionState;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.UI.HtmlControls;
+using Hints.DB;
+using Hints.DB.Section;
+using AuthoringTool.CommonQuestionEdit;
+using PaperSystem;
+
+public partial class AuthoringTool_CaseEditor_Paper_Paper_EmulationQuestion : AuthoringTool_BasicForm_BasicForm
+{
+    protected System.Web.UI.WebControls.Table LayoutTableForFeature = new Table();
+    string UserID, strCaseID, strDivisionID, strClinicNum, strSectionName, strPaperID, cQuestionType;
+    string strQID = "";
+    string strGroupID = "";
+    string strGroupDivisionID = "";
+    string strSenceID="";
+      
+    protected clsHintsDB hintsDB = new clsHintsDB();
+    protected SQLString mySQL = new SQLString();
+    
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        this.Initiate();
+        //接收參數
+        this.getParametor();
+
+        if (!IsPostBack)
+        {         
+            //初始化所有表格，判斷情境題是否已存在，若存在則將原有的題目資料顯示在表格中
+            this.InitiateQuestionTextTableData(); 
+            //初始化QuestionType，將QuestionType資料顯示
+            InitiateQuestionType();
+            InitiateSceneID();
+        }
+        //初始化Layout
+        InititateLayoutTableForFeature();
+        //朱君 增加編輯特徵值屬性表格
+        this.FindControl("PanelFeature").Controls.Add(LayoutTableForFeature);
+    }
+
+    private void getParametor()
+    {
+        //UserID
+        if (Session["UserID"] != null)
+        {
+            UserID = Session["UserID"].ToString();
+        }
+        //strUserID = "swakevin";
+
+        //CaseID
+        if (Session["CaseID"] != null)
+        {
+            strCaseID = Session["CaseID"].ToString();
+            hiddenCaseID.Value = Session["CaseID"].ToString();
+        }
+
+        //Division
+        if (Session["DivisionID"] != null)
+        {
+            strDivisionID = Session["DivisionID"].ToString();
+        }
+
+        //SectionName
+        if (Session["SectionName"] != null)
+        {
+            strSectionName = Session["SectionName"].ToString();
+            hiddenSectionName.Value = Session["SectionName"].ToString();
+        }
+
+        //PaperID
+        if (Session["PaperID"] != null)
+        {
+            strPaperID = Session["PaperID"].ToString();
+            hiddenPaperID.Value = Session["PaperID"].ToString();
+        }
+
+        //QID
+        if ((Request.QueryString["QID"] + "").Length > 0)
+        {
+            strQID = Request.QueryString["QID"].ToString();
+        }
+        else
+        {
+            if (ViewState["strQID"] != null && ViewState["strQID"].ToString() != "")
+                strQID = ViewState["strQID"].ToString();
+            else
+            {
+                strQID = CommonQuestionUtility.GetNewID(this.UserID, "QuestionSituation");
+                ViewState["strQID"] = strQID;
+            }  
+        }
+
+
+        //GroupID
+        if (Request.QueryString["GroupID"] != null)
+        {
+            strGroupID = Request.QueryString["GroupID"].ToString();
+            hfGroupID.Value = strGroupID;
+            if (Session["GroupID"] != null)
+            {
+                Session["GroupID"] = strGroupID;
+            }
+            else
+            {
+                Session.Add("GroupID", strGroupID);
+            }
+        }
+
+        //GroupDivisionID
+        if (strGroupID != null)
+        {
+            if (strGroupID.Trim().Length > 0)
+            {
+                DataReceiver myReceiver = new DataReceiver();
+                strGroupDivisionID = myReceiver.getGroupDivisionID(strGroupID);
+
+                if (Session["GroupDivisionID"] != null)
+                {
+                    Session["GroupDivisionID"] = strGroupDivisionID;
+                }
+                else
+                {
+                    Session.Add("GroupDivisionID", strGroupDivisionID);
+                }
+            }
+        }
+
+        //Opener
+        if (Request.QueryString["Opener"] != null)
+        {
+            hiddenOpener.Value = Request.QueryString["Opener"].ToString();
+        }
+
+        //QuestionType
+        if (Session["QuestionMode"] != null)
+        {
+            hiddenQuestionMode.Value = Session["QuestionMode"].ToString();
+        }
+
+        //ModifyType
+        if (Session["ModifyType"] != null)
+        {
+            hiddenModifyType.Value = Session["ModifyType"].ToString();
+        }
+        //BModify
+        if (Request.QueryString["bModify"] != null)
+        {
+            hiddenBModify.Value = Request.QueryString["bModify"].ToString();
+            if (Session["bModify"] != null)
+            {
+                Session["bModify"] = hiddenBModify.Value;
+            }
+            else
+            {
+                Session.Add("bModify", hiddenBModify.Value);
+            }
+        }
+
+        //PreOpener
+        if (Session["PreOpener"] != null)
+        {
+            if (Request.QueryString["Opener"] != null)
+                if (Request.QueryString["Opener"].ToString() == "Paper_MainPage")
+                    hiddenPreOpener.Value = Session["PreOpener"].ToString();
+                else
+                    hiddenPreOpener.Value = "";
+        }
+        
+        //指定此情境題代號為5
+        cQuestionType = "5";
+
+    }
+    
+    private void InitiateSceneID()
+    {
+        strSenceID = GetSceneID(strQID);
+        Session["SceneID"] = strSenceID;
+    }
+    
+    //判斷情境題是否已存在，若存在則將原有的題目資料顯示在表格中
+    private void InitiateQuestionTextTableData()
+    {
+        DataSet dsSituationQuestion = mySQL.checkSituationQuestionExist(strQID);
+
+        if (dsSituationQuestion.Tables[0].Rows.Count > 0)
+        {
+            string strQuestion = dsSituationQuestion.Tables[0].Rows[0]["cQuestion"].ToString();
+            string strInformation=dsSituationQuestion.Tables[0].Rows[0]["strInformation"].ToString();
+           
+            txtQuestion.Text = strQuestion;
+            txtDescription.Text = strInformation;
+
+            //到VRTeachingAssistant尋找相關設定2015/01/148 阿良
+            DataSet dsTAData = mySQL.checkTADataExist(strQID);
+            if (dsTAData.Tables[0].Rows.Count > 0)
+            {
+                if (dsTAData.Tables[0].Rows[0]["IsStudentSetSensitivity"].ToString() == "true")
+                {
+                    rbtSensitivityYes.Checked = true;
+                    ddlSensitivity.Enabled = false;
+                    ddlHintSensitivity.Enabled = false;
+                }
+                else
+                {
+                    rbtSensitivityNo.Checked = true;
+                    ddlSensitivity.SelectedIndex = Convert.ToInt32(dsTAData.Tables[0].Rows[0]["SensitivityDefaultValue"].ToString().Split('@')[0]) - 1;
+                    //ddlHintSensitivity.SelectedIndex = Convert.ToInt32(dsTAData.Tables[0].Rows[0]["SensitivityDefaultValue"].ToString().Split('@')[1]) - 1;
+                    ddlSensitivity.Enabled = true;
+                    //ddlHintSensitivity.Enabled = true;
+                }
+
+                if (dsTAData.Tables[0].Rows[0]["IsStudentChoiceType"].ToString() == "true")
+                {
+                    rbtYes.Checked = true;
+                    cbxText.Enabled = false;
+                    cbxHint.Enabled = false;
+                    cbxSuggest.Enabled = false;
+                    cbxText.Checked = false;
+                    cbxSuggest.Checked = false;
+                    cbxHint.Checked = false;
+                }
+                else
+                {
+                    rbtNo.Checked = true;
+                    string[] split = dsTAData.Tables[0].Rows[0]["AppearType"].ToString().Split('@');
+                    cbxText.Enabled = true;
+                    cbxHint.Enabled = true;
+                    cbxSuggest.Enabled = true;
+
+                    for (int i = 0; i < split.Length; i++)
+                    {
+                        if (split[i] == "Text")
+                            cbxText.Checked = true;
+                        if (split[i] == "Suggest")
+                            cbxSuggest.Checked = true;
+                    }
+
+                }
+
+            }
+            else
+            {
+                //沒有這筆便先寫一筆新的進入
+                insertToVRTeachingAssistant();
+            }
+
+        }
+
+    }
+
+    //初始化QuestionType，將QuestionType資料顯示
+    private void InitiateQuestionType()
+    {
+        DataSet dsSituationQuestion = mySQL.checkSituationQuestionExist(strQID);
+
+        if (dsSituationQuestion.Tables[0].Rows.Count > 0)
+        {
+            string strQustionType = dsSituationQuestion.Tables[0].Rows[0]["QuestionType"].ToString();
+
+            rbSelect.Enabled = false;
+            rbNormal.Enabled = false;
+            rbRange.Enabled = false;
+
+            if (strQustionType == "None")
+                rbNone.Checked = true;
+
+
+            else if (strQustionType == "RecordStepsType")
+                rbRecordStep.Checked = true;
+
+
+            else if (strQustionType == "EssayQuestionType")
+                rbEssayQuestion.Checked = true;
+
+            else if (strQustionType.Split('@')[0] == "CircleItemsType")
+            {
+                rbCircleItems.Checked = true;
+                rbSelect.Enabled = true;
+                rbNormal.Enabled = true;
+                rbRange.Enabled = true;
+                
+                if(strQustionType.Split('@')[1] == "Normal")
+                    rbNormal.Checked = true;
+
+                else if (strQustionType.Split('@')[1] == "Range")
+                    rbRange.Checked = true;
+
+                else if (strQustionType.Split('@')[1] == "Select")
+                    rbSelect.Checked = true;
+            }
+                
+        }
+
+    }
+    
+    private void InititateLayoutTableForFeature()
+    {
+        LayoutTableForFeature.ID = "LayoutTableForFeature";
+        //第一列
+        LayoutTableForFeature.Width = Unit.Parse("100%");
+        //LayoutTable.BorderWidth = Unit.Parse("3px");
+        //LayoutTable.BorderColor = Color.Green;
+        LayoutTableForFeature.ID = "LayoutTableForFeature_1";
+        LayoutTableForFeature.Rows.Add(new TableRow());
+        LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells.Add(new TableCell());
+        Label FeatureTitle = new Label();
+        FeatureTitle.Text = "SetFeature";
+
+        LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells[0].Controls.Add(FeatureTitle);
+        LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells[0].CssClass = "title";
+
+        //第二列
+        LayoutTableForFeature.Rows.Add(new TableRow());
+        LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells.Add(new TableCell());
+        Table containerForFeature = CommonQuestionUtility.get_HTMLTable(1, 2);
+        LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells[0].Controls.Add(containerForFeature);
+
+
+        FeatureItemControl qFeatureItemControlTable = new FeatureItemControl(this, 1, strGroupID, strQID); //FeatureItemControlTable  
+        qFeatureItemControlTable.ID = "FeatureItemControlTable";
+        this.LayoutTableForFeature.Rows.Add(new TableRow());
+        this.LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells.Add(new TableCell());
+        this.LayoutTableForFeature.Rows[LayoutTableForFeature.Rows.Count - 1].Cells[0].Controls.Add(qFeatureItemControlTable);
+
+    }
+
+    protected void btnFinish_Click(object sender, EventArgs e)
+    {
+        if (strSenceID=="")
+            strSenceID = Session["SceneID"].ToString();
+
+        //判斷是否有設定VRversion
+        if (strSenceID != "")
+        { 
+        //朱君 2012/11/25 將使用者所選擇的特徵值存入暫存陣列中，並儲存於資料庫中。
+         clsFeaturevalue clsSaveFeature = new clsFeaturevalue();
+         clsSaveFeature.update_FeatureItemIntoDataBase(clsSaveFeature.get_dtFeatureItem_Data(strGroupID, this));
+        
+         //將情境題題目存入資料表中
+         UpdateQuestion();
+        
+         Session["QuestionAccessorParameter"] = null;
+         Session["QuestionAccessor"] = null;
+         Session["QuestionSelectionAccessor"] = null;
+
+         //若從編輯考卷來，直接將問題新增至考卷裡 蕭凱 2014/3/25
+         if (hiddenPreOpener.Value == "SelectPaperMode")
+         {
+             DataReceiver myReceiver = new DataReceiver();
+             SQLString mySQL = new SQLString();
+             //取得考卷題數
+             string strSeq = Convert.ToString(myReceiver.getPaperContentMaxSeq(strPaperID) + 1);
+             mySQL.SaveToQuestionContent(strPaperID, strQID, "0", "5", "General", strSeq);
+         }
+
+         //完成儲存
+         FinishSave();
+        }
+        else
+        {
+            Response.Write("<script>window.alert('未決定題目VR場景')</script>");
+        }
+    }
+
+    private void UpdateQuestion()
+    {
+        string strQuestionType = "";
+        
+        if (rbRecordStep.Checked)
+            strQuestionType = "RecordStepsType";
+        else if (rbEssayQuestion.Checked)
+            strQuestionType = "EssayQuestionType";
+        else if (rbCircleItems.Checked)
+        {
+            strQuestionType = "CircleItemsType";
+
+            if (rbNormal.Checked)
+                strQuestionType = strQuestionType + '@' + "Normal";
+            else if (rbRange.Checked)
+                strQuestionType = strQuestionType + '@' + "Range";
+            else if (rbSelect.Checked)
+                strQuestionType = strQuestionType + '@' + "Select";
+        }
+        else if (rbNone.Checked)
+            strQuestionType = "None";
+
+        mySQL.saveStiuationQuestion(txtQuestion.Text, txtDescription.Text, strQID, strGroupID, cQuestionType, strQuestionType, strSenceID);
+    }
+
+
+    //朱君 2013/4/11 確認是否已為此題情境題設定VR場景
+    protected Boolean CheckIsSetVRVersion(string cQID)
+    {
+        Boolean IsSetVR = false;
+        DataTable dtSituationalData = new DataTable();
+
+        string strSQL;
+        strSQL = "SELECT * FROM Question_Situational WHERE cQID='" + cQID + "'";
+        dtSituationalData = hintsDB.getDataSet(strSQL).Tables[0];
+        if (dtSituationalData.Rows.Count > 0)
+            if (dtSituationalData.Rows[0]["VersionOfVR"].ToString() != "")
+                IsSetVR = true;
+
+        return IsSetVR;
+    }
+
+    //朱君 2013/4/20 若資料庫中已設定SceneID，則讀取出來
+    protected string GetSceneID(string cQID)
+    {
+        string strSceneID = "";
+        DataTable dtSituationalData = new DataTable();
+
+        string strSQL;
+        strSQL = "SELECT * FROM Question_Situational WHERE cQID='" + cQID + "'";
+        dtSituationalData = hintsDB.getDataSet(strSQL).Tables[0];
+        if (dtSituationalData.Rows.Count > 0)
+            if (dtSituationalData.Rows[0]["cSceneID"].ToString() != "")
+                strSceneID = dtSituationalData.Rows[0]["cSceneID"].ToString();
+
+        return strSceneID;
+    }
+
+    //儲存完成後，下個頁面的連結設定
+    private void FinishSave()
+    {
+        string strQuestionMode = "";
+        if (hiddenQuestionMode.Value != null)
+        {
+            strQuestionMode = hiddenQuestionMode.Value;
+        }
+        string strModifyType = "";
+        if (hiddenModifyType.Value != null)
+        {
+            strModifyType = hiddenModifyType.Value;
+        }
+
+        string strBModify = "";
+        if (hiddenBModify.Value != null)
+        {
+            strBModify = hiddenBModify.Value;
+        }
+
+        if (strModifyType == "Paper")
+        {
+            //編輯考卷
+            if (strBModify == "True")
+            {
+                //修改題目
+                if (hiddenPreOpener.Value == "SelectPaperMode")
+                    Response.Redirect("Paper_MainPage.aspx?Opener=SelectPaperMode&cCaseID=" + strCaseID + "&cSectionName=" + strSectionName + "&cPaperID=" + strPaperID);
+                else
+                    Response.Redirect("Paper_MainPage.aspx");
+            }
+            else
+            {
+                //新增問題
+                if (hiddenPreOpener.Value == "SelectPaperMode")
+                    Response.Redirect("Paper_MainPage.aspx?Opener=SelectPaperMode&cCaseID=" + strCaseID + "&cSectionName=" + strSectionName + "&cPaperID=" + strPaperID);
+                else
+                    Response.Redirect("Paper_MainPage.aspx");
+            }
+        }
+        else
+        {
+            //編輯題目
+            if (strBModify == "True")
+            {
+                //修改題目
+                Response.Redirect("Paper_QuestionViewNew.aspx");
+            }
+            else
+            {
+                //新增問題
+                Response.Redirect("Paper_QuestionViewNew.aspx");
+            }
+        }
+    }
+
+    protected void btnVMQuestion_Click(object sender, EventArgs e)
+    {
+        Button btnClickButton = (Button)sender;
+        string strID = btnClickButton.ID;
+
+        //開啟VM後，在session中記錄目前的VM模式與題目ID
+        Session["VMQuestionID"] = strQID;
+        Session["IsQuestionMode"] = "True";
+        Session["QuestionMode"] = "EditQuestion";
+        
+        //若不是設定答案的Button則不在Session傳入題型，則單純編輯題目
+        if (strID.Equals("btnSetAnswer"))
+        {
+            //是否要開啟註記功能
+            if (rbRecordStep.Checked)
+                Session["SituationQuestionMode"] = "RecordStepsType";
+            if (rbEssayQuestion.Checked)
+                Session["SituationQuestionMode"] = "EssayQuestionType";
+            if (rbCircleItems.Checked)
+            {
+                Session["SituationQuestionMode"] = "CircleItemsType";
+
+                if(rbNormal.Checked)
+                    Session["CircleType"] = "Normal";
+                if (rbRange.Checked)
+                    Session["CircleType"] = "Range";
+                if (rbSelect.Checked)
+                    Session["CircleType"] = "Select";
+                    
+            }
+               
+
+            if (rbRecordStep.Checked)
+                //顯示選擇設定答案的方式選單
+                divSetAnswerType.Style["display"] = "";
+            else
+                Page.RegisterStartupScript("open", "<script language=\"javascript\">showVMWindow()</script>");
+
+        }
+            
+           
+
+        else if (strID.Equals("btnVMQuestion"))
+        {
+            Session["SituationQuestionMode"] = "SetScene";
+            //連接到VM入口頁面
+            Page.RegisterStartupScript("open", "<script language=\"javascript\">showVMSelectMenuWindow()</script>");
+        }
+    }
+
+    protected void btSetAnswerTypeCancel_Click(object sender, EventArgs e)
+    {
+        divSetAnswerType.Style["display"] = "none";
+    }
+
+    //連接到concept Map
+    protected void lbtnConceptMapEdit_Click(object sender, EventArgs e)
+    {
+        //先得知使用什麼流覽器
+        System.Web.HttpBrowserCapabilities browser = Request.Browser;
+        /*string s = "Browser Capabilities\n"
+            + "Type = " + browser.Type + "\n"
+            + "Name = " + browser.Browser + "\n"
+            + "Version = " + browser.Version + "\n"
+            + "Major Version = " + browser.MajorVersion + "\n"
+            + "Minor Version = " + browser.MinorVersion + "\n"
+            + "Platform = " + browser.Platform + "\n"
+            + "Is Beta = " + browser.Beta + "\n"
+            + "Is Crawler = " + browser.Crawler + "\n"
+            + "Is AOL = " + browser.AOL + "\n"
+            + "Is Win16 = " + browser.Win16 + "\n"
+            + "Is Win32 = " + browser.Win32 + "\n"
+            + "Supports Frames = " + browser.Frames + "\n"
+            + "Supports Tables = " + browser.Tables + "\n"
+            + "Supports Cookies = " + browser.Cookies + "\n"
+            + "Supports VBScript = " + browser.VBScript + "\n"
+            + "Supports JavaScript = " +
+                browser.EcmaScriptVersion.ToString() + "\n"
+            + "Supports Java Applets = " + browser.JavaApplets + "\n"
+            + "Supports ActiveX Controls = " + browser.ActiveXControls
+                  + "\n";
+
+        Response.Write(s);*/
+        if (browser.Browser.ToString() == "IE")
+        {
+            // 使用Google Chrome開啟Concept Map 頁面  丫良 2015/02/26 //須將下方的IP位置改成當server的電腦IP，因為屬於不同專案
+            string strScriptURL = "var WshShell = new ActiveXObject('Wscript.Shell');WshShell.run('chrome.exe " + "http://140.116.72.28/shape/Hubs/ShapeShare/Dragflow.aspx" + "?userId=" + UserID + "&groupID=VR&chairman=2&name=demoUser001&QID=" + strQID + "', 1, false);WshShell.Quit;";//shape/Hubs/ShapeShare/Dragflow.aspx?userId=afeng&groupID=VR&chairman=2&name=demoUser001&QID=afengQuestionSituation201407052310466149320
+            Page.ClientScript.RegisterClientScriptBlock(this.GetType(), "MyScript", strScriptURL, true);
+            divSetAnswerType.Style["display"] = "none";
+        }
+
+        else
+        {
+            //如果是已經用google Chrome開啟，直接使用windows.open
+            Page.RegisterStartupScript("open", "<script language=\"javascript\">showConceptMapWindow('" + UserID + "','" + strQID + "')</script>");
+            divSetAnswerType.Style["display"] = "none";
+        }
+    }
+
+    //連接到VR
+    protected void lbtnSituationalEdit_Click(object sender, EventArgs e)
+    {
+        //檢查是否已經有使用Concept Map編輯過答案
+        string strSQL;
+        strSQL = " SELECT * FROM ConceptMap_VRQuesIDCorrespondCID C WHERE C.cQID = '"+strQID+"'";
+        DataTable dtIsUsedConceptMapEdit = new DataTable();
+        dtIsUsedConceptMapEdit = hintsDB.getDataSet(strSQL).Tables[0];
+
+        //已經有用concept map編輯過
+        if (dtIsUsedConceptMapEdit.Rows.Count > 0)
+        {
+            //連接至VR系統
+            Page.RegisterStartupScript("open", "<script language=\"javascript\">showVMWindow()</script>");
+            divSetAnswerType.Style["display"] = "none";
+        }
+
+        else
+        {
+            divIsUseConcept.Style["display"] = "";
+            divSetAnswerType.Style["display"] = "none";
+        }
+       
+    }
+
+    protected void btnUseSituationalEditOK_Click(object sender, EventArgs e)
+    {
+        //連接至VR系統
+        Page.RegisterStartupScript("open", "<script language=\"javascript\">showVMWindow()</script>");
+        divIsUseConcept.Style["display"] = "none";
+        divSetAnswerType.Style["display"] = "none";
+    }
+
+    protected void btnUseSituationalEditNO_Click(object sender, EventArgs e)
+    {
+        divIsUseConcept.Style["display"] = "none";
+        divSetAnswerType.Style["display"] = "none";
+    }
+
+
+    //因為目前只有紀錄步驟題型需要設定參考解答，因此若不是選擇紀錄步驟題型則設定答案按鈕關閉
+    protected void rb_CheckedChanged(object sender, EventArgs e)
+    {   
+        RadioButton rb = (RadioButton)sender;
+        if (rb.ID.Equals("rbNone"))
+            btnSetAnswer.Enabled = false;
+        else
+            btnSetAnswer.Enabled = true;
+
+        rbSelect.Enabled = false;
+        rbNormal.Enabled = false;
+        rbRange.Enabled = false;
+    }
+
+    //因為目前只有紀錄步驟題型需要設定參考解答，因此若不是選擇紀錄步驟題型則設定答案按鈕關閉
+    protected void rb_circleCheckedChanged(object sender, EventArgs e)
+    {
+        RadioButton rb = (RadioButton)sender;
+        if (rb.ID.Equals("rbNone"))
+            btnSetAnswer.Enabled = false;
+        else
+            btnSetAnswer.Enabled = true;
+
+        if (rb.Checked == true)
+        {
+            rbSelect.Enabled = true;
+            rbNormal.Enabled = true;
+            rbRange.Enabled = true;
+        }
+        else
+        {
+            rbSelect.Enabled = false;
+            rbNormal.Enabled = false;
+            rbRange.Enabled = false;
+        }
+
+
+    }
+
+    protected void btnLearningPointer_Click(object sender, EventArgs e)
+    {
+        Session["VMQuestionID"] = strQID;
+        //連接到VM入口頁面
+        Page.RegisterStartupScript("open", "<script language=\"javascript\">showSetLearningPage()</script>");
+    }
+
+    protected void btnTextBook_Click(object sender, EventArgs e)
+    {
+        Session["VMQuestionID"] = strQID;
+        Session["UserID"] = UserID;
+        //連接到VM入口頁面
+        
+        //先得知使用什麼流覽器
+        System.Web.HttpBrowserCapabilities browser = Request.Browser;
+       
+        if (browser.Browser.ToString() == "IE")
+        {
+            // 使用Google Chrome開啟Concept Map 頁面  丫良 2015/02/26 //須將下方的IP位置改成當server的電腦IP，因為屬於不同專案
+            string strScriptURL = "var WshShell = new ActiveXObject('Wscript.Shell');WshShell.run('chrome.exe " + "http://140.116.72.28/hints/AuthoringTool/CaseEditor/Paper/SetVRTextBook.aspx" + "?UserID=" + UserID + "&VMQuestionID=" + strQID + "', 1, false);WshShell.Quit;";
+            Page.ClientScript.RegisterClientScriptBlock(this.GetType(), "MyScript", strScriptURL, true);
+            divSetAnswerType.Style["display"] = "none";
+        }
+
+        else
+        {
+            //如果是已經用google Chrome開啟，直接使用windows.open
+            Page.RegisterStartupScript("open", "<script language=\"javascript\">showSetTextBookPage()</script>");
+            divSetAnswerType.Style["display"] = "none";
+        }
+    }
+
+    //設定靈敏度的rbt觸發
+    protected void rbtSensitivityYes_Click(object sender, EventArgs e)
+    {
+        if (rbtSensitivityYes.Checked == true)
+        {
+
+            rbtSensitivityNo.Checked = false;
+            UpdateIsStudentSetSensitivity("true");
+            ddlSensitivity.Enabled = false;
+            
+        }
+        else
+        {
+            rbtSensitivityYes.Checked = false;
+            UpdateIsStudentSetSensitivity("false");
+            ddlSensitivity.Enabled = true;
+        }
+    }
+
+    protected void rbtSensitivityNo_Click(object sender, EventArgs e)
+    {
+        if (rbtSensitivityNo.Checked == true)
+        {
+            rbtSensitivityYes.Checked = false;
+            UpdateIsStudentSetSensitivity("false");
+            ddlSensitivity.Enabled = true;
+        }
+        else
+        {
+            rbtSensitivityNo.Checked = false;
+            UpdateIsStudentSetSensitivity("true");
+            ddlSensitivity.Enabled = false;
+        }
+    }
+
+    //設定靈敏度觸發
+    protected void ddlRight_Click(object sender, EventArgs e)
+    {
+        UpdateSensitivityDefaultValue((ddlSensitivity.SelectedIndex + 1).ToString());
+    }
+
+    //設定學生權限的rbt觸發
+    protected void rbtRightYes_Click(object sender, EventArgs e)
+    {
+        if (rbtYes.Checked == true)
+        {
+
+            rbtNo.Checked = false;
+            cbxText.Enabled = false;
+            cbxHint.Enabled = false;
+            cbxSuggest.Enabled = false;
+            UpdateIsStudentChoiceType("true");
+        }
+        else
+        {
+            rbtYes.Checked = false;
+            UpdateIsStudentChoiceType("false");
+            cbxText.Enabled = true;
+            cbxHint.Enabled = true;
+            cbxSuggest.Enabled = true;
+           
+        }
+    }
+
+    protected void rbtRightNo_Click(object sender, EventArgs e)
+    {
+        if (rbtNo.Checked == true)
+        {
+            rbtYes.Checked = false;
+            UpdateIsStudentChoiceType("false");
+            cbxText.Enabled = true;
+            cbxHint.Enabled = true;
+            cbxSuggest.Enabled = true;
+
+            
+        }
+        else
+        {
+            rbtNo.Checked = false;
+            cbxText.Enabled = false;
+            cbxHint.Enabled = false;
+            cbxSuggest.Enabled = false;
+            UpdateIsStudentChoiceType("true");
+        }
+    }
+
+    //設定類型觸發
+    protected void cbxRight_Click(object sender, EventArgs e)
+    {
+        string strType = "";
+
+        if (cbxText.Checked == true)
+            strType = strType + "Text@";
+        if (cbxSuggest.Checked == true)
+            strType = strType + "Suggest@";
+
+        UpdateAppearType(strType);
+
+    }
+
+
+    //先寫一筆預設的資料到VRTeachingAssistant
+    protected void insertToVRTeachingAssistant()
+    {
+        DateTime myDate = DateTime.Now;
+        string date = myDate.ToString("yyyyMMddhhmmffff");
+        string strSQL = "INSERT INTO VRTeachingAssistant VALUES('" + "VRTAid" + date + "','" + strQID + "','false','1','false','Text@Suggest@')";
+        try
+        {
+            hintsDB.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+    }
+
+
+    //更新在資料表VRTeachingAssistant中的資訊 
+    #region
+    protected void UpdateIsStudentSetSensitivity(string value)
+    {
+
+        string strSQL = "UPDATE VRTeachingAssistant  SET IsStudentSetSensitivity = '" + "false" + "' WHERE strQuestionID = '" + strQID + "';";
+        try
+        {
+            hintsDB.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+    }
+
+    protected void UpdateIsStudentChoiceType(string value)
+    {
+
+        string strSQL = "UPDATE VRTeachingAssistant  SET IsStudentChoiceType = '" + "false" + "' WHERE strQuestionID = '" + strQID + "';";
+        try
+        {
+            hintsDB.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+    }
+
+    protected void UpdateSensitivityDefaultValue(string value)
+    {
+
+        string strSQL = "UPDATE VRTeachingAssistant  SET SensitivityDefaultValue = '" + value + "' WHERE strQuestionID = '" + strQID + "';";
+        try
+        {
+            hintsDB.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+    }
+
+    protected void UpdateAppearType(string value)
+    {
+
+        string strSQL = "UPDATE VRTeachingAssistant  SET AppearType = '" + "Text@Suggest@" + "' WHERE strQuestionID = '" + strQID + "';";
+        try
+        {
+            hintsDB.ExecuteNonQuery(strSQL);
+        }
+        catch
+        {
+            //this.RegisterClientScriptBlock("", "<script> alert('error'); </script>");
+        }
+    }
+    #endregion
+}

@@ -1,0 +1,82 @@
+<HTML>
+	<HEAD>
+		<title>Hyper Link</title>
+		<meta name="GENERATOR" Content="Microsoft Visual Studio 7.0">
+		<meta name="CODE_LANGUAGE" Content="C#">
+		<meta name="vs_defaultClientScript" content="JavaScript">
+		<meta name="vs_targetSchema" content="http://schemas.microsoft.com/intellisense/ie5">
+		<script language="javascript">
+			function btnOKClick() {
+			var globalDoc = window.dialogArguments;
+				
+			// error checking
+
+			if (!txtURL.value || txtURL.value == "http://") { 
+				alert("URL must be specified.");
+				txtURL.focus();
+				return;
+			}
+
+			//Identify selected text
+			var sText = globalDoc.selection.createRange();
+			var elmImage;
+			var oAttr;
+			if (!sText==""){
+				//Create link
+				//sText.execCommand("CreateLink","",txtURL.value);
+				sText.execCommand("Underline");
+				//sText.parentElement().Onclick="window.showModalDialog('"+txtURL.value+"',null,'dialogLeft=2000,dialogTop=2000');";
+				sText.parentElement().Onclick="window.open('"+txtURL.value+"',null,'toolbar=no,menubar=no,location=no,left=2000,top=2000');";
+				
+				//window.showModalDialog("SMD_target.htm","Dialog Box Arguments # 
+			//4","dialogHeight: 200px; dialogWidth: 150px; dialogTop: 150px; dialogLeft: 
+			//150px; edge: Sunken; center: Yes; help: Yes; resizable: Yes; status: Yes;");
+
+				sText.parentElement().Style="cursor:hand";
+				//sText.parentElement().target="_blank";
+			}
+			else{
+				alert("Please select a string!");
+			}   
+
+			sText.collapse(false);
+			sText.select();
+			window.close(); 
+			}
+
+			function ShowPic()
+			{
+				strFile = showModalDialog("/AuthoringTool/Upload/ShowUploadFile.aspx?FileType=image&MultiSel=1","","resizable: no; help: no; status: no; scroll: yes; ");
+				txtURL.value = "/AuthoringTool/Upload/Album.aspx?FileID=" + strFile
+			}
+
+			function ShowPic2()
+			{
+				strFile = showModalDialog("/AuthoringTool/Upload/ShowUploadFile.aspx?","","resizable: no; help: no; status: no; scroll: yes; ");
+				txtURL.value = "/AuthoringTool/Upload/ReadDBFile.aspx?FileID=" + strFile
+			}
+			function Text1_onclick()
+			{
+				
+			}
+		</script>
+	    </HEAD>
+	<body style="BACKGROUND: buttonface; COLOR: windowtext" scroll="no">
+		<fieldset style="LEFT: 30px; WIDTH: 513px; POSITION: absolute; TOP: 30px; HEIGHT: 93px"><FONT face="新細明體"></FONT><FONT face="新細明體"></FONT><FONT face="新細明體"></FONT><FONT face="新細明體"></FONT><FONT face="新細明體"></FONT><FONT face="新細明體"></FONT><FONT face="新細明體"></FONT><FONT face=新細明體></FONT><FONT face=新細明體></FONT><FONT 
+face=新細明體></FONT><FONT face=新細明體></FONT><FONT face=新細明體></FONT><FONT 
+face=新細明體></FONT><FONT face=新細明體></FONT><br>
+			<span>&nbsp;URL&nbsp;：&nbsp;&nbsp;</span><INPUT id="txtURL" style="WIDTH: 256px; HEIGHT: 24px" type="text" size="100" name="txtURL"
+				value="http://" language="javascript" onclick="return Text1_onclick()">&nbsp;
+			<INPUT id="btnBrowser" style="WIDTH: 77px; HEIGHT: 24px" type="button" value="Link Image" name="btnBrowser"
+				onclick="ShowPic()">
+			<!--
+			&nbsp;&nbsp;&nbsp;&nbsp; 
+			<INPUT id="Button1" style="WIDTH: 77px; HEIGHT: 24px" type="button" value="Link File1" name="btnBrowser"
+				onclick="ShowPic2()"><br>
+			<span></span>
+			-->
+		</fieldset> 
+<INPUT id=btnOK style="LEFT: 560px; WIDTH: 64px; POSITION: absolute; TOP: 32px; HEIGHT: 24px" onclick=btnOKClick() type=button value=OK name=btnOK> <INPUT id="btnCancel" style="LEFT: 560px; WIDTH: 64px; POSITION: absolute; TOP: 70px; HEIGHT: 24px"
+			type="button" value="Cancel" name="btnCancel" onclick="window.close()">
+	</body>
+</HTML>
